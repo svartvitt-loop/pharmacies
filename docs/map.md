@@ -5,7 +5,8 @@
 - **MapLibre GL JS 6** (`maplibre-gl`), WebGL vector rendering.
 - **OpenFreeMap** vector tiles (`https://tiles.openfreemap.org/planet`, OpenMapTiles schema) and its
   glyph server for fonts (`Noto Sans Regular`, including Greek). Free, **no API key**, no account.
-- A **custom style written in code** (`minimalStyle()` in `web/src/map.ts`) instead of a hosted style.
+- A **custom style written in code** (`minimalStyle()` in `web/src/map/style.ts`) instead of a hosted
+  style. The marker images are in `map/markers.ts`, the map class in `map/index.ts`.
 
 History: the first version used Leaflet with standard OpenStreetMap raster tiles. When the user asked
 for a simpler map ("only street names and the pharmacies") raster tiles could not do that, and the

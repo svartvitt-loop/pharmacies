@@ -45,7 +45,9 @@ web/
   src/time.ts                  Athens time-zone helpers (independent of the visitor's zone)
   src/geo.ts                   distances, map-area bounds
   src/format.ts                status and hours texts, distances, links
-  src/map.ts                   MapLibre map (imperative class), custom style, cross markers, popups
+  src/map/index.ts             MapLibre map (imperative class): markers, popups, camera
+  src/map/style.ts             the custom street-map style (palette, road classes and widths)
+  src/map/markers.ts           cross marker images and colours per status
   src/i18n.ts, greek.ts        Greek/English strings; accent folding; transliteration
   src/style.css                layout (side-by-side ≥1024px, tabs below), light/dark tokens
   public/data/                 generated duties.json (git-ignored)
