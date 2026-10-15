@@ -53,13 +53,15 @@ One workflow, two jobs: **build** (test, scrape or restore, build, upload) → *
 | `web` | Vite dev server with hot reload; source bind-mounted | http://localhost:5173 |
 | `preview` (profile `preview`) | Production build in nginx under `/pharmacies/`, like GitHub Pages | http://localhost:8080/pharmacies/ |
 | `caddy` (profile `lan`) | HTTPS for phones on the LAN, in front of `web` and `preview` | https://&lt;LAN_IP&gt;:8443/ |
+| `test` (profile `tools`) | Playwright smoke tests in Google Chrome, against their own dev server | — |
 
 ```bash
 cp .env.example .env                         # once; set HOST_UID/HOST_GID if not 1000, LAN_IP for phones
 docker compose up                            # data + dev server
 docker compose up --build preview            # + production build (rebuild after code changes)
 docker compose --profile preview --profile lan up --build   # everything, incl. HTTPS for phones
-docker compose run --rm data pytest -q       # scraper tests
+./dev check                                  # lint, type-check, Playwright and scraper tests
+./dev help                                   # all tasks: up, lint, typecheck, build, test, npm …, sh …
 docker compose down                          # stop (keep volumes: the caddy CA lives in one)
 ```
 
@@ -75,15 +77,34 @@ docker compose down                          # stop (keep volumes: the caddy CA 
 **Details:**
 
 - Containers run as `HOST_UID:HOST_GID` (default 1000), so `duties.json` is owned by you.
-- `node_modules` lives in the `web_node_modules` volume, not in `web/`, so it never mixes with a
-  host install. `docker/web-start.sh` runs `npm ci` when `package-lock.json` changed since the last
-  install, then starts Vite.
+- **`./dev`** wraps `docker compose run --rm --no-deps …`, so dev tasks never need Node or Python on
+  the host: `npm`/`npx` run in `web`, `uv`/`python`/`pytest` in `data`, the Playwright tests in
+  `test`. Claude Code is held to this in this repo: `.claude/settings.json` denies host toolchain
+  commands, and a `PreToolUse` hook (`.claude/hooks/require-docker.sh`) also catches them inside
+  compound commands. The hook reads every `|` as a pipe, so it can block e.g. `perl -pe 's|a|npm|'`.
+- **Overhead of `./dev`:** each task starts and removes a container, about 0.5 s (0.9 s the first
+  time); the tools themselves run at the same speed. Measured:
+
+  | Command | Total | Tool's own time | Container overhead |
+  |---|---|---|---|
+  | `./dev lint` | 0.8 s | 0.06 s (oxlint) | ~0.7 s |
+  | `./dev scraper-test` | 1.7 s | 0.2 s (pytest) | ~1.5 s, partly Python startup that the host has too |
+  | `./dev test` | 11 s | 9.7 s (Playwright) | ~1.3 s |
+  | hook, per Bash command | ~0 s | | |
+
+  So quick tasks take 1–2 s instead of being instant, and slow ones barely change (about 10%).
+  `npm ci` only runs when `package-lock.json` changed. If the overhead ever matters, `./dev` could
+  `docker compose exec` into a running container instead (about 0.1–0.2 s).
+- `node_modules` lives in the `web_node_modules` volume (shared by `web` and `test`), not in `web/`,
+  so it never mixes with a host install. Their entrypoint `docker/npm-deps.sh` runs `npm ci` when
+  `package-lock.json` changed since the last install, then runs the command.
 - Ports 5173 and 8080 listen on `127.0.0.1` only; the `lan` profile's 8443/8081 listen on all
   interfaces (Docker bypasses ufw).
 - The preview mounts `web/public/data/` instead of baking it in, so new data needs no rebuild.
   nginx mimics Pages: `/pharmacies` → `/pharmacies/`, `Cache-Control: max-age=600`, `.mjs` as
   `text/javascript`.
-- Image versions follow CI: Node 24, Python 3.12, uv.
+- Image versions follow CI: Node 24, Python 3.12, uv. The `test` image's tag must match
+  `@playwright/test` in `web/package-lock.json`.
 
 **Testing on a phone (`lan` profile).** Location ("Near me") needs a secure context, which a phone
 only gets over HTTPS. Caddy issues certificates from its own local CA:
@@ -100,6 +121,8 @@ The CA is stored in the `caddy_data` volume; `docker compose down -v` deletes it
 the new one. If the machine's IP changes, update `LAN_IP` and restart caddy.
 
 ### Without Docker
+
+Not recommended; prefer `./dev`.
 
 ```bash
 cd scraper

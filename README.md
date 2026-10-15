@@ -38,6 +38,8 @@ With Docker (details in [docs/operations.md](docs/operations.md#local-developmen
 docker compose up                    # dev server with hot reload: http://localhost:5173
 docker compose up --build preview    # production build like GitHub Pages: http://localhost:8080/pharmacies/
 DATA_SOURCE=scrape docker compose up # real scrape instead of copying the live site's data
+./dev check                          # lint, type-check, Playwright and scraper tests, in containers
+./dev help                           # all tasks (build, test, npm …, sh …)
 ```
 
 Without Docker:

@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Runs the project's dev tasks in containers, so only Docker is needed on the host.
+# Usage: ./dev <task> [args…]; ./dev help lists the tasks.
+set -euo pipefail
+cd "$(dirname "$0")"
+
+# One-off container; --no-deps skips the data step that `docker compose up` runs first.
+run() { docker compose run --rm --no-deps "$@"; }
+
+usage() {
+  cat <<'EOF'
+Usage: ./dev <task> [args…]
+
+  up [args…]          docker compose up (data + dev server on http://localhost:5173)
+  lint                oxlint (web)
+  typecheck           tsc -b (web: app, config files and e2e tests)
+  build               type-check + production build into web/dist
+  test [args…]        Playwright smoke tests in Google Chrome; args go to playwright test
+  scraper-test [args…] pytest (scraper)
+  check               lint, typecheck, test and scraper-test
+  npm|npx …           any npm/npx command in the web container, e.g. ./dev npm install leaflet
+  uv|python|pytest …  any of these in the scraper container
+  sh [service]        shell in a container (web by default; data, test)
+EOF
+}
+
+task=${1:-help}
+[ $# -gt 0 ] && shift
+
+case "$task" in
+  up)                exec docker compose up "$@" ;;
+  lint)              run web npm run lint ;;
+  typecheck)         run web npx tsc -b ;;
+  build)             run web npm run build ;;
+  test)              run test npm test -- "$@" ;;
+  scraper-test)      run data pytest -q "$@" ;;
+  check)             "$0" lint && "$0" typecheck && "$0" test && "$0" scraper-test ;;
+  npm | npx)         run web "$task" "$@" ;;
+  uv | python | pytest) run data "$task" "$@" ;;
+  sh)                run "${1:-web}" sh ;;
+  help | -h | --help) usage ;;
+  *)                 usage >&2; exit 2 ;;
+esac
