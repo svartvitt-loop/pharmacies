@@ -109,6 +109,7 @@ uv run python -m fsa_scraper --days 55 --out ../web/public/data/duties.json   # 
 cd ../web
 npm install
 npm run dev        # http://localhost:5173
+npm test           # Playwright smoke tests (e2e/) in Google Chrome, against a fixed dataset
 npm run build      # tsc --noEmit + vite build → web/dist
 npx vite preview   # serve web/dist (http://localhost:4173)
 ```

@@ -52,6 +52,7 @@ uv run python -m fsa_scraper --days 55 --out ../web/public/data/duties.json
 cd ../web
 npm install
 npm run dev          # http://localhost:5173
+npm test             # Playwright smoke tests in the installed Google Chrome
 npm run build        # type-check + production build into web/dist
 ```
 
