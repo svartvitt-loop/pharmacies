@@ -4,6 +4,8 @@ A static website that lists the on-duty pharmacies of Athens/Attica on a list an
 filterable by time (now, next hours, tonight, tomorrow, any date/time range), area and distance.
 Greek and English UI.
 
+**Live:** https://svartvitt-loop.github.io/pharmacies/
+
 ## How it works
 
 ```
