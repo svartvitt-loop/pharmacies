@@ -1,12 +1,13 @@
 import type { Interval, Pharmacy } from "./data";
 import { transliterate } from "./greek";
 import { lang, locale, t } from "./i18n";
-import type { Result } from "./state";
+import { onDuty, type Result } from "./state";
 import { HOUR, athensDate, formatClock, formatDay } from "./time";
 
-export type Status = "open" | "closing" | "later";
+export type Status = "open" | "closing" | "later" | "closed";
 
 export function status(result: Result, now: number): Status {
+  if (!onDuty(result)) return "closed";
   if (!result.current) return "later";
   return result.current.end - now <= HOUR ? "closing" : "open";
 }
@@ -18,6 +19,7 @@ export function display(text: string): string {
 
 export function statusText(result: Result, now: number): string {
   const loc = locale();
+  if (!onDuty(result)) return t("closed");
   if (result.current) {
     const label = status(result, now) === "closing" ? t("closingSoon") : t("openNow");
     return `${label} · ${t("until")} ${formatClock(result.current.end, loc)}`;
@@ -33,6 +35,12 @@ export function intervalText(interval: Interval): string {
   const sameDay = athensDate(interval.start) === athensDate(interval.end - 1);
   const end = formatClock(interval.end, loc);
   return `${formatDay(interval.start, loc)} ${formatClock(interval.start, loc)}–${sameDay ? end : `${end} (+1)`}`;
+}
+
+/** Duty hours in the window, or for a closed pharmacy its next duty. */
+export function hoursText(result: Result): string[] {
+  if (onDuty(result)) return result.matched.map(intervalText);
+  return result.next ? [`${t("nextDuty")}: ${intervalText(result.next)}`] : [];
 }
 
 export function distanceText(km: number): string {

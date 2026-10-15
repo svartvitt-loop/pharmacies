@@ -1,11 +1,21 @@
 import "./style.css";
 import { loadDataset, type Dataset } from "./data";
 import { fold } from "./greek";
-import { inMapAreaLabel, resultsLabel, setLang, t } from "./i18n";
+import { closedCountLabel, inMapAreaLabel, resultsLabel, setLang, t } from "./i18n";
 import { renderList } from "./list";
 import { PharmacyMap, type Bounds } from "./map";
 import { display, el } from "./render";
-import { RADII_KM, WHEN_OPTIONS, filterPharmacies, readState, windowCovered, writeState, type Result, type View } from "./state";
+import {
+  RADII_KM,
+  WHEN_OPTIONS,
+  filterPharmacies,
+  onDuty,
+  readState,
+  windowCovered,
+  writeState,
+  type Result,
+  type View,
+} from "./state";
 import { athensDate, formatClock, formatDay } from "./time";
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -63,15 +73,20 @@ function renderResults(now = Date.now()): void {
   if (!data) return;
   const bounds = sideBySide.matches ? mapBounds : null;
   const shown = bounds ? results.filter((r) => inBounds(r, bounds)) : results;
+  // The counts are about pharmacies on duty; closed ones (if shown) are counted separately.
+  const total = results.filter(onDuty).length;
+  const shownOpen = shown.filter(onDuty).length;
+  const shownClosed = shown.length - shownOpen;
   const count = $("result-count");
-  if (shown.length < results.length) {
+  const closedNote = shownClosed ? [" · ", closedCountLabel(shownClosed)] : [];
+  if (shownOpen < total) {
     const showAll = el("button", { type: "button", className: "link-button" }, t("showAll"));
     showAll.addEventListener("click", () => map.fitResults());
-    count.replaceChildren(inMapAreaLabel(shown.length, results.length), " · ", showAll);
+    count.replaceChildren(inMapAreaLabel(shownOpen, total), ...closedNote, " · ", showAll);
   } else {
-    count.textContent = resultsLabel(results.length);
+    count.replaceChildren(resultsLabel(total), ...closedNote);
   }
-  renderList(listEl, shown, now, results.length ? t("noneInMapArea") : emptyMessage, showOnMap);
+  renderList(listEl, shown, now, total ? t("noneInMapArea") : emptyMessage, showOnMap);
 }
 
 sideBySide.addEventListener("change", () => renderResults());
@@ -136,6 +151,7 @@ function renderControls(): void {
   near.textContent = state.near ? t("nearMeOn") : t("nearMe");
   near.setAttribute("aria-pressed", String(!!state.near));
   $("radius-label").hidden = !state.near;
+  $("show-closed").setAttribute("aria-pressed", String(state.showClosed));
   radius.replaceChildren(
     ...RADII_KM.map((km) => el("option", { value: String(km), selected: km === state.radiusKm }, km ? `${km} km` : t("anyDistance"))),
   );
@@ -155,7 +171,7 @@ function showSuggestions(): void {
   const query = fold(areaSearch.value.trim());
   // Count pharmacies per area in the current time window, ignoring the area filter itself.
   const counts = new Map<string, number>();
-  for (const r of filterPharmacies(data.pharmacies, { ...state, areas: [], near: null }, Date.now())) {
+  for (const r of filterPharmacies(data.pharmacies, { ...state, areas: [], near: null, showClosed: false }, Date.now())) {
     counts.set(r.pharmacy.area, (counts.get(r.pharmacy.area) ?? 0) + 1);
   }
   const matches = data.areas
@@ -237,6 +253,11 @@ $("near-me").addEventListener("click", () => {
 
 radius.addEventListener("change", () => {
   state.radiusKm = Number(radius.value);
+  commit();
+});
+
+$("show-closed").addEventListener("click", () => {
+  state.showClosed = !state.showClosed;
   commit();
 });
 

@@ -36,6 +36,9 @@ const strings = {
     until: "έως",
     opens: "Ανοίγει",
     closed: "Εκτός εφημερίας",
+    nextDuty: "Επόμενη εφημερία",
+    showClosed: "Εμφάνιση και κλειστών",
+    closedCount: (n: number) => `${n} εκτός εφημερίας`,
     call: "Κλήση",
     directions: "Οδηγίες",
     moreInfo: "Περισσότερα",
@@ -84,6 +87,9 @@ const strings = {
     until: "until",
     opens: "Opens",
     closed: "Not on duty",
+    nextDuty: "Next duty",
+    showClosed: "Also show closed",
+    closedCount: (n: number) => `${n} not on duty`,
     call: "Call",
     directions: "Directions",
     moreInfo: "More info",
@@ -127,6 +133,10 @@ export function resultsLabel(n: number): string {
 
 export function inMapAreaLabel(shown: number, total: number): string {
   return strings[current].inMapArea(shown, total);
+}
+
+export function closedCountLabel(n: number): string {
+  return strings[current].closedCount(n);
 }
 
 export function locale(): string {

@@ -21,6 +21,7 @@ export interface State {
   to: string;
   areas: string[];
   radiusKm: number;
+  showClosed: boolean; // also list pharmacies not on duty in the window
   near: LatLng | null; // never stored in the URL
 }
 
@@ -43,6 +44,7 @@ export function readState(now: number): State {
     to: q.get("to") ?? "23:00",
     areas: q.get("areas")?.split(",").filter(Boolean) ?? [],
     radiusKm: Number(q.get("radius")) || 0,
+    showClosed: q.get("closed") === "1",
     near: null,
   };
 }
@@ -59,6 +61,7 @@ export function writeState(state: State): void {
   }
   if (state.areas.length) q.set("areas", state.areas.join(","));
   if (state.radiusKm) q.set("radius", String(state.radiusKm));
+  if (state.showClosed) q.set("closed", "1");
   history.replaceState(null, "", `${location.pathname}?${q}`);
   try {
     localStorage.setItem("lang", state.lang);
@@ -100,9 +103,14 @@ function overlaps(interval: Interval, [from, to]: [number, number]): boolean {
 
 export interface Result {
   pharmacy: Pharmacy;
-  matched: Interval[];
+  matched: Interval[]; // empty: not on duty in the window (only with showClosed)
   current: Interval | null; // interval open at this moment
+  next: Interval | null; // first interval that hasn't ended yet
   distanceKm: number | null;
+}
+
+export function onDuty(result: Result): boolean {
+  return result.matched.length > 0;
 }
 
 export function distanceKm(a: LatLng, b: LatLng): number {
@@ -120,19 +128,23 @@ export function filterPharmacies(pharmacies: Pharmacy[], state: State, now: numb
   for (const pharmacy of pharmacies) {
     if (areas.size && !areas.has(pharmacy.area)) continue;
     const matched = pharmacy.intervals.filter((i) => overlaps(i, window));
-    if (!matched.length) continue;
+    if (!matched.length && !state.showClosed) continue;
     let distance: number | null = null;
     if (state.near && pharmacy.lat !== null && pharmacy.lng !== null) {
       distance = distanceKm(state.near, { lat: pharmacy.lat, lng: pharmacy.lng });
       if (state.radiusKm && distance > state.radiusKm) continue;
     }
     const current = pharmacy.intervals.find((i) => i.start <= now && now < i.end) ?? null;
-    results.push({ pharmacy, matched, current, distanceKm: distance });
+    const next = pharmacy.intervals.find((i) => i.end > now) ?? null;
+    results.push({ pharmacy, matched, current, next, distanceKm: distance });
   }
+  // Pharmacies on duty first, then the closed ones; within each group nearest or soonest first.
   return results.sort((a, b) => {
+    if (onDuty(a) !== onDuty(b)) return onDuty(a) ? -1 : 1;
     if (a.distanceKm !== null && b.distanceKm !== null) return a.distanceKm - b.distanceKm;
-    if (!!a.current !== !!b.current) return a.current ? -1 : 1;
-    return a.matched[0].start - b.matched[0].start || a.pharmacy.area.localeCompare(b.pharmacy.area, "el");
+    if (onDuty(a) && !!a.current !== !!b.current) return a.current ? -1 : 1;
+    const start = (r: Result) => (r.matched[0] ?? r.next)?.start ?? Infinity;
+    return start(a) - start(b) || a.pharmacy.area.localeCompare(b.pharmacy.area, "el");
   });
 }
 

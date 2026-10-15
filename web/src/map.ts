@@ -2,15 +2,15 @@ import { LngLatBounds, Map as MapLibre, NavigationControl, Popup, setWorkerUrl, 
 import "maplibre-gl/dist/maplibre-gl.css";
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 import { lang, t } from "./i18n";
-import { directionsUrl, display, el, intervalText, status, statusText } from "./render";
-import type { LatLng, Result } from "./state";
+import { directionsUrl, display, el, hoursText, status, statusText } from "./render";
+import { onDuty, type LatLng, type Result } from "./state";
 
 // The bundle can't find MapLibre's worker next to itself, so point it at the emitted copy.
 setWorkerUrl(workerUrl);
 
 const ATHENS: [number, number] = [23.7275, 37.9838];
-const COLORS = { open: "#16a34a", closing: "#f59e0b", later: "#2563eb" } as const;
-const SORT = { later: 0, closing: 1, open: 2 } as const; // open pharmacies drawn on top
+const COLORS = { open: "#16a34a", closing: "#f59e0b", later: "#2563eb", closed: "#9ca3af" } as const;
+const SORT = { closed: -1, later: 0, closing: 1, open: 2 } as const; // open pharmacies drawn on top
 
 /** A pharmacy cross with a white outline, drawn at 2x for sharp rendering. */
 function crossImage(color: string): ImageData {
@@ -187,6 +187,8 @@ export class PharmacyMap {
           "icon-ignore-placement": true,
           "symbol-sort-key": ["get", "sort"],
         },
+        // Closed pharmacies stay in the background.
+        paint: { "icon-opacity": ["match", ["get", "icon"], "cross-closed", 0.45, 1] },
       });
       this.map.addLayer({
         id: "you",
@@ -250,10 +252,12 @@ export class PharmacyMap {
     }
   }
 
-  /** Zoom so that every current result (and the user's position) is visible. */
+  /** Zoom so that every pharmacy on duty (or else every result) and the user's position are visible. */
   fitResults(): void {
+    const all = [...this.results.values()];
+    const open = all.filter(onDuty);
     const bounds = new LngLatBounds();
-    for (const { pharmacy: p } of this.results.values()) {
+    for (const { pharmacy: p } of open.length ? open : all) {
       if (p.lat !== null && p.lng !== null) bounds.extend([p.lng, p.lat]);
     }
     if (this.near) bounds.extend([this.near.lng, this.near.lat]);
@@ -289,7 +293,7 @@ function popupContent(result: Result, now: number): HTMLElement {
     el("strong", {}, display(p.name)),
     el("div", {}, `${display(p.address)}, ${display(p.area)}`),
     el("div", { className: `status status-${status(result, now)}` }, statusText(result, now)),
-    el("div", { className: "muted" }, result.matched.map(intervalText).join(" · ")),
+    el("div", { className: "muted" }, hoursText(result).join(" · ")),
     el(
       "div",
       { className: "popup-actions" },

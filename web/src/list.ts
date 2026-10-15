@@ -1,7 +1,8 @@
 import { t } from "./i18n";
-import { directionsUrl, display, distanceText, el, intervalText, moreInfoUrl, status, statusText } from "./render";
-import type { Result } from "./state";
+import { directionsUrl, display, distanceText, el, hoursText, moreInfoUrl, status, statusText } from "./render";
+import { onDuty, type Result } from "./state";
 
+/** Pharmacies on duty (or emptyMessage if there are none), then the closed ones under their own heading. */
 export function renderList(
   container: HTMLElement,
   results: Result[],
@@ -9,11 +10,15 @@ export function renderList(
   emptyMessage: string,
   onShowOnMap: (id: string) => void,
 ): void {
-  if (!results.length) {
-    container.replaceChildren(el("p", { className: "empty" }, emptyMessage));
-    return;
+  const open = results.filter(onDuty);
+  const closed = results.filter((r) => !onDuty(r));
+  const nodes: HTMLElement[] = open.length
+    ? open.map((r) => card(r, now, onShowOnMap))
+    : [el("p", { className: "empty" }, emptyMessage)];
+  if (closed.length) {
+    nodes.push(el("h2", { className: "group-heading" }, t("closed")), ...closed.map((r) => card(r, now, onShowOnMap)));
   }
-  container.replaceChildren(...results.map((r) => card(r, now, onShowOnMap)));
+  container.replaceChildren(...nodes);
 }
 
 function card(result: Result, now: number, onShowOnMap: (id: string) => void): HTMLElement {
@@ -34,7 +39,7 @@ function card(result: Result, now: number, onShowOnMap: (id: string) => void): H
     el("h2", {}, display(p.name)),
     address,
     el("p", { className: "status" }, statusText(result, now)),
-    el("ul", { className: "hours" }, ...result.matched.map((i) => el("li", {}, intervalText(i)))),
+    el("ul", { className: "hours" }, ...hoursText(result).map((text) => el("li", {}, text))),
     el(
       "div",
       { className: "actions" },

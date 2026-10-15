@@ -10,6 +10,7 @@
   --open: #15803d;
   --closing: #b45309;
   --later: #2563eb;
+  --closed: #9ca3af;
   --radius: 12px;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 2px 8px rgb(0 0 0 / 0.04);
   color-scheme: light dark;
@@ -28,6 +29,7 @@
     --open: #4ade80;
     --closing: #fbbf24;
     --later: #60a5fa;
+    --closed: #6b7280;
     --shadow: none;
   }
 }
@@ -360,6 +362,20 @@ body[data-view="map"] .list {
   border-left-color: var(--closing);
 }
 
+.card.status-closed {
+  border-left-color: var(--closed);
+}
+
+.group-heading {
+  grid-column: 1 / -1;
+  margin: 12px 0 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
 .card h2 {
   margin: 2px 0;
   font-size: 1.02rem;
@@ -403,6 +419,11 @@ body[data-view="map"] .list {
 .status-closing .status,
 .status.status-closing {
   color: var(--closing);
+}
+
+.status-closed .status,
+.status.status-closed {
+  color: var(--muted);
 }
 
 .hours {
