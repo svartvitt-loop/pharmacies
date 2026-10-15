@@ -6,7 +6,10 @@ requires-python = ">=3.12"
 dependencies = ["beautifulsoup4>=4.12"]
 
 [dependency-groups]
-dev = ["pytest>=8"]
+dev = [
+    "pytest>=8",
+    "ruff>=0.17.1",
+]
 
 [tool.uv]
 package = false
@@ -14,3 +17,9 @@ package = false
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+extend-select = ["I", "UP", "B"] # import order, modern syntax, likely bugs

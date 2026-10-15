@@ -35,7 +35,7 @@ The open work items live in [../TODO.md](../TODO.md); commit conventions in [../
 |---|---|
 | Data source | [fsa-efimeries.gr](https://fsa-efimeries.gr/) — official duty schedule of the Pharmaceutical Association of Attica (ΦΣΑ) |
 | Coverage | Yesterday + 55 days ahead; ~2,500 pharmacies, ~76 on duty per day; **Piraeus not included** |
-| Scraper | Python 3.12+, BeautifulSoup, stdlib `urllib`; pytest |
+| Scraper | Python 3.12 (`.python-version`), BeautifulSoup, stdlib `urllib`; pytest, ruff |
 | Frontend | Vite 8 + TypeScript 7 + React 19 (React Compiler), oxlint; MapLibre GL 6 with OpenFreeMap vector tiles; Vitest unit tests, Playwright smoke tests |
 | Hosting | GitHub Pages, built and deployed by GitHub Actions every 3 hours |
 | Languages | Greek and English (English shows ELOT 743 transliterations of names/addresses) |

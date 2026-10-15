@@ -12,7 +12,7 @@ usage() {
 Usage: ./dev <task> [args…]
 
   up [args…]          docker compose up (data + dev server on http://localhost:5173)
-  lint                oxlint (web)
+  lint                oxlint (web); ruff check and format check (scraper)
   typecheck           tsc -b (web: app, config files and e2e tests)
   build               type-check + production build into web/dist
   test [args…]        unit tests (web/src/*.test.ts, Vitest); args go to vitest
@@ -20,7 +20,7 @@ Usage: ./dev <task> [args…]
   scraper-test [args…] pytest (scraper)
   check               lint, typecheck, test, scraper-test and e2e
   npm|npx …           any npm/npx command in the web container, e.g. ./dev npm install leaflet
-  uv|python|pytest …  any of these in the scraper container, e.g. ./dev uv add requests
+  uv|python|pytest|ruff …  any of these in the scraper container, e.g. ./dev ruff format
   sh [service]        shell in a container (web by default; data, e2e)
 EOF
 }
@@ -30,7 +30,7 @@ task=${1:-help}
 
 case "$task" in
   up)                exec docker compose up "$@" ;;
-  lint)              run web npm run lint ;;
+  lint)              run web npm run lint && run data uv run --locked sh -c 'ruff check && ruff format --check' ;;
   typecheck)         run web npm run typecheck ;;
   build)             run web npm run build ;;
   test)              run web npm test -- "$@" ;;
@@ -40,7 +40,7 @@ case "$task" in
   npm | npx)         run web "$task" "$@" ;;
   uv)                run data uv "$@" ;;
   # uv run syncs the environment (a volume) from uv.lock first.
-  python | pytest)   run data uv run --locked "$task" "$@" ;;
+  python | pytest | ruff) run data uv run --locked "$task" "$@" ;;
   sh)                run "${1:-web}" sh ;;
   help | -h | --help) usage ;;
   *)                 usage >&2; exit 2 ;;

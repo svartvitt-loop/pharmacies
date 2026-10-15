@@ -139,3 +139,8 @@ last good site up, so it is the safe reaction to anything that looks like a chan
 readable hours today, or most hours unreadable (cards found but fields moved). A few unreadable
 hours still only log a warning. When today can't be fetched, the run stops at the second request
 instead of loading the source with 55 more that it would discard.
+
+**D32 — ruff for the scraper; Python pinned to 3.12.** The web side had oxlint and tsc, the scraper no
+linter at all. ruff (lint with import order, pyupgrade and bugbear rules, plus its formatter) is one
+fast tool in the dev dependency group, run by `./dev lint` and CI. `scraper/.python-version` makes CI
+use the same Python as the container instead of whatever the runner has.

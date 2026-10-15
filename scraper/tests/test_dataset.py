@@ -10,7 +10,14 @@ TOMORROW = date(2026, 10, 17)
 
 def card(name: str, area: str = "ΚΥΨΕΛΗ", hours: str = "8 ΠΡΩΙ - 11 ΒΡΑΔΥ") -> DutyCard:
     return DutyCard(
-        duty_id="1", name=name, address=f"ΟΔΟΣ {name} 1", area=area, phone="2100000000", hours=hours, lat=37.99, lng=23.74
+        duty_id="1",
+        name=name,
+        address=f"ΟΔΟΣ {name} 1",
+        area=area,
+        phone="2100000000",
+        hours=hours,
+        lat=37.99,
+        lng=23.74,
     )
 
 

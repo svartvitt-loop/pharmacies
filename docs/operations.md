@@ -80,7 +80,7 @@ docker compose down                          # stop (keep volumes: the caddy CA 
 
 - Containers run as `HOST_UID:HOST_GID` (default 1000), so `duties.json` is owned by you.
 - **`./dev`** wraps `docker compose run --rm --no-deps …`, so dev tasks never need Node or Python on
-  the host: `npm`/`npx` run in `web`, `uv`/`python`/`pytest` in `data`, the Playwright tests in
+  the host: `npm`/`npx` run in `web`, `uv`/`python`/`pytest`/`ruff` in `data`, the Playwright tests in
   `e2e`. Claude Code is held to this in this repo: `.claude/settings.json` denies host toolchain
   commands, and a `PreToolUse` hook (`.claude/hooks/require-docker.sh`) also catches them inside
   compound commands. The hook reads every `|` as a pipe, so it can block e.g. `perl -pe 's|a|npm|'`.
@@ -155,7 +155,10 @@ only works over HTTPS or on `localhost`.
 ## How changes were verified
 
 - **Scraper:** pytest covers every observed hours format, unknown text, the DST night, and card parsing
-  against a fictional HTML fixture shaped like the real response.
+  against a fictional HTML fixture shaped like the real response; also the dataset assembly and the
+  checks before publishing, retries, and the CLI's stop and skip rules. ruff lints and checks the
+  formatting (`./dev lint`). Python is pinned to 3.12 by `scraper/.python-version` (uv reads it in
+  CI and in the container).
 - **Frontend unit tests** (`./dev test`, Vitest, `web/src/*.test.ts`) cover the pure logic: Athens
   time across the DST change, every time window, matching and ordering, statuses and their texts,
   transliteration, dataset parsing. They pass in any time zone (checked with `TZ=Pacific/Auckland`

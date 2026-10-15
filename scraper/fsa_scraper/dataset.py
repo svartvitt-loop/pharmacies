@@ -22,15 +22,16 @@ def build_dataset(cards_by_day: dict[date, list[DutyCard]], generated_at: dateti
     for day, cards in sorted(cards_by_day.items()):
         for card in cards:
             pid = pharmacy_id(card.name, card.address)
-            pharmacies.setdefault(pid, {
-                "id": pid,
-                "name": card.name,
-                "address": card.address,
-                "area": card.area,
-                "phone": card.phone,
-                "lat": card.lat,
-                "lng": card.lng,
-            })
+            if pid not in pharmacies:
+                pharmacies[pid] = {
+                    "id": pid,
+                    "name": card.name,
+                    "address": card.address,
+                    "area": card.area,
+                    "phone": card.phone,
+                    "lat": card.lat,
+                    "lng": card.lng,
+                }
             try:
                 intervals = [[s.isoformat(), e.isoformat()] for s, e in parse_intervals(card.hours, day)]
             except HoursParseError as exc:
