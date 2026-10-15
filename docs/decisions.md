@@ -144,3 +144,9 @@ instead of loading the source with 55 more that it would discard.
 linter at all. ruff (lint with import order, pyupgrade and bugbear rules, plus its formatter) is one
 fast tool in the dev dependency group, run by `./dev lint` and CI. `scraper/.python-version` makes CI
 use the same Python as the container instead of whatever the runner has.
+
+**D33 — CI tests gate the deploy, and only the deploy job can publish.** CI used to run only pytest
+and the type-check inside the build. A `test` job now runs every check (Playwright only for code
+changes: on schedule it would add time and a dependency on the map tiles without testing anything
+new) and `build` needs it. Pull requests run `test` alone. Pages permissions moved from the whole
+workflow to the deploy job, the only one that runs no third-party code, and every job got a timeout.

@@ -17,30 +17,79 @@ on:
       - "docker/**"
       - ".dockerignore"
       - ".env.example"
+  # Pull requests (Dependabot's) only run the tests.
+  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
-  cancel-in-progress: false
+  # Runs that deploy queue up behind each other; a newer push to a pull request cancels its older run.
+  group: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.ref) || 'pages' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Lint and test the scraper
+        working-directory: scraper
+        run: |
+          uv run --locked ruff check
+          uv run --locked ruff format --check
+          uv run --locked pytest -q
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Lint, type-check and unit-test the site
+        working-directory: web
+        run: |
+          npm ci
+          npm run lint
+          npm run typecheck
+          npm test
+
+      # Code changes get the browser tests too; scheduled and manual runs only refresh the data.
+      # They use Google Chrome, which the runner image has.
+      - name: Playwright smoke tests
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        working-directory: web
+        run: npm run test:e2e
+
+      - name: Keep traces of failed Playwright tests
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-test-results
+          path: web/test-results
+          retention-days: 7
+          if-no-files-found: ignore
+
+  build:
+    needs: test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30 # a healthy scrape takes about a minute; this cuts off endless retries
     env:
       DAYS: 55 # FSA publishes about 8 weeks ahead; unpublished days are skipped
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - uses: astral-sh/setup-uv@v6
-
-      - name: Test scraper
-        working-directory: scraper
-        run: uv run pytest -q
 
       # Push builds reuse the data from the latest scheduled scrape, so code changes
       # deploy without hitting the source. Cache keys are immutable, hence one per run;
@@ -55,11 +104,12 @@ jobs:
           restore-keys: duties-${{ env.DAYS }}d-
 
       # Runs on schedule/dispatch, or on push when nothing was cached.
-      # If the source is down this step fails and the previously deployed site stays up.
+      # If the source is down or its data looks broken, this step fails and the previously
+      # deployed site stays up.
       - name: Fetch duty schedules
         if: steps.duties-cache.outputs.cache-matched-key == ''
         working-directory: scraper
-        run: uv run python -m fsa_scraper --days "$DAYS" --out ../web/public/data/duties.json
+        run: uv run --locked python -m fsa_scraper --days "$DAYS" --out ../web/public/data/duties.json
 
       - name: Cache duty schedules
         if: steps.duties-cache.outputs.cache-matched-key == ''
@@ -87,6 +137,11 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Only this job can publish; the others run third-party code (actions, npm install scripts).
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

@@ -21,14 +21,23 @@
 
 ## CI/CD: `.github/workflows/deploy.yml`
 
-One workflow, two jobs: **build** (test, scrape or restore, build, upload) → **deploy** (`deploy-pages`).
+One workflow, three jobs: **test** → **build** (scrape or restore, build, upload) → **deploy**
+(`deploy-pages`). A failing test stops the deploy; the site stays as it was.
 
-| Trigger | Scrapes? |
-|---|---|
-| `schedule` — `17 */3 * * *` (every 3 h, UTC) | yes |
-| `workflow_dispatch` (manual "Run workflow") | yes |
-| `push` to `main` | no — restores the latest cached `duties.json`; scrapes only if no cache exists |
-| `push` touching only `**.md`, `.gitignore`, `LICENSE*`, `.claude/**`, `.vscode/**`, the Docker files (`compose.yaml`, `docker/**`, `.dockerignore`, `.env.example`) | workflow doesn't run |
+- **test:** ruff and pytest for the scraper; oxlint, `tsc -b` and the Vitest unit tests for the site;
+  the Playwright smoke tests on pushes and pull requests only (scheduled and manual runs just refresh
+  the data, and the code was tested when it was pushed). They run in the runner's Google Chrome; on a
+  failure, `web/test-results` (traces) is kept as an artifact for 7 days.
+- Python comes from `scraper/.python-version`, and every `uv run` is `--locked`, so a lockfile that
+  doesn't match `pyproject.toml` fails instead of being re-resolved.
+
+| Trigger | Tests | Scrapes? | Deploys? |
+|---|---|---|---|
+| `schedule` — `17 */3 * * *` (every 3 h, UTC) | without Playwright | yes | yes |
+| `workflow_dispatch` (manual "Run workflow") | without Playwright | yes | yes |
+| `push` to `main` | all | no — restores the latest cached `duties.json`; scrapes only if no cache exists | yes |
+| `pull_request` (Dependabot's) | all | no | no |
+| `push` touching only `**.md`, `.gitignore`, `LICENSE*`, `.claude/**`, `.vscode/**`, the dev environment (`compose.yaml`, `dev`, `docker/**`, `.dockerignore`, `.env.example`) | workflow doesn't run | | |
 
 - **Data cache:** each scrape saves `duties.json` with key `duties-<DAYS>d-<run_id>`; pushes restore the
   newest key with prefix `duties-<DAYS>d-`. Cache keys can't be overwritten, hence one per run.
@@ -38,8 +47,13 @@ One workflow, two jobs: **build** (test, scrape or restore, build, upload) → *
   or if the result looks broken (no readable hours today, or most hours unreadable); the job fails
   and the previously deployed site stays up. Individual future dates that fail are skipped with a
   log line. The output file is written atomically.
-- Scraper unit tests run before every build.
-- `concurrency: pages` without cancelling: overlapping runs queue instead of racing.
+- **Permissions:** the workflow's token can only read the repository; `pages: write` and
+  `id-token: write` are granted to the deploy job alone, which runs no third-party code. Checkouts
+  don't keep the token in `.git/config` (`persist-credentials: false`).
+- **Timeouts:** test 15 min, build 30 min (a healthy scrape takes about a minute; this cuts off a
+  source that hangs through every retry), deploy 10 min.
+- `concurrency: pages` without cancelling: overlapping deploying runs queue instead of racing. Pull
+  requests have their own group, where a newer push cancels the older run.
 - GitHub pauses scheduled workflows after **60 days without repository activity**; re-enable in the
   Actions tab if the data stops updating.
 
