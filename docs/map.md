@@ -85,5 +85,8 @@ map reports its bounds on every `moveend`/`resize`, which drives the "list follo
   `maplibre-gl/dist/maplibre-gl-worker.mjs?url` and calls `setWorkerUrl()`.
 - MapLibre 6 doesn't export the style-spec TypeScript types, so the style object and expressions are
   passed with `as never` casts.
+- **WebGL 2 is required:** MapLibre 6 throws in its constructor without it (old devices, blocklisted
+  GPUs, hardware acceleration turned off). `MapView` sits in an error boundary
+  (`components/ErrorBoundary.tsx`), so the map pane then shows a notice and the list keeps working.
 - Bundle cost: about 290 KB gzipped JavaScript (Leaflet was about 50 KB); Vite warns about chunk size.
 - Attribution required and shown: OpenFreeMap, © OpenMapTiles, © OpenStreetMap contributors.

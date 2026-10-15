@@ -24,6 +24,7 @@
 | Overpass (OSM) research query failed | `502 Bad Gateway` from overpass-api.de, a mirror returned HTML | Retried; the main endpoint answered on the second try |
 | Map tiles didn't render in the Docker preview ("Worker failed to load") | nginx has no MIME type for `.mjs` and served MapLibre's worker as `application/octet-stream`; Pages sends `text/javascript` | `types { text/javascript mjs; }` in `docker/nginx.conf` |
 | Area search box narrower and the "Radius" text touching its select after the React port | The port dropped the `#area-search` and `#radius-label` ids that `style.css` still targeted | Classes `.area-search` and `.radius-label` |
+| Blank page in browsers without WebGL 2 | MapLibre 6 throws in its constructor; with no error boundary React unmounted the whole app, list included | Error boundary around `MapView` showing a notice in the map pane; e2e test with WebGL 2 switched off |
 
 ## Known issues and limitations (open)
 

@@ -54,6 +54,7 @@ const strings = {
       "Εμφανίζονται μόνο τα εφημερεύοντα φαρμακεία, όχι όσα λειτουργούν με κανονικό ωράριο. Ο Πειραιάς (Φαρμακευτικός Σύλλογος Πειραιά) δεν περιλαμβάνεται.",
     loading: "Φόρτωση…",
     loadError: "Αποτυχία φόρτωσης δεδομένων. Δοκιμάστε ξανά αργότερα.",
+    mapUnavailable: "Ο χάρτης δεν μπορεί να εμφανιστεί σε αυτή τη συσκευή (χρειάζεται WebGL 2). Η λίστα λειτουργεί κανονικά.",
   },
   en: {
     title: "On-duty pharmacies",
@@ -105,6 +106,7 @@ const strings = {
       "Only on-duty pharmacies are shown, not those open during regular hours. Piraeus (covered by a separate association) is not included.",
     loading: "Loading…",
     loadError: "Could not load data. Please try again later.",
+    mapUnavailable: "The map can't be shown on this device (it needs WebGL 2). The list works as usual.",
   },
 } as const;
 

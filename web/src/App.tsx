@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Filters } from "./components/Filters";
 import { Footer } from "./components/Footer";
 import { Header } from "./components/Header";
@@ -71,16 +72,25 @@ export function App() {
             error={error}
             onShowOnMap={showOnMap}
           />
-          <MapView
-            ref={map}
-            results={results}
-            now={now}
-            near={state.near}
-            // Without an area or location filter, results span all of Attica; zooming to them hides the city.
-            fit={state.areas.length || state.near ? "results" : "athens"}
-            view={state.view}
-            onBoundsChange={setMapBounds}
-          />
+          {/* MapLibre throws without WebGL 2; the list must keep working then. */}
+          <ErrorBoundary
+            fallback={
+              <section className="map-pane" aria-labelledby="tab-map">
+                <p className="empty">{t("mapUnavailable")}</p>
+              </section>
+            }
+          >
+            <MapView
+              ref={map}
+              results={results}
+              now={now}
+              near={state.near}
+              // Without an area or location filter, results span all of Attica; zooming to them hides the city.
+              fit={state.areas.length || state.near ? "results" : "athens"}
+              view={state.view}
+              onBoundsChange={setMapBounds}
+            />
+          </ErrorBoundary>
         </main>
         <Footer generatedAt={data?.generatedAt ?? null} />
       </div>

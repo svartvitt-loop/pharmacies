@@ -53,6 +53,21 @@ test("opens a pharmacy on the map", async ({ page }) => {
   await expect(page.locator(".maplibregl-popup")).toContainText(/kolonakiou/i, { timeout: 15_000 });
 });
 
+test("keeps the list when the map can't start", async ({ page }) => {
+  // MapLibre needs WebGL 2 and throws without it. A string, as this file has no DOM types.
+  await page.addInitScript({
+    content: `{
+      const getContext = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function (type, ...args) {
+        return type === "webgl2" ? null : getContext.call(this, type, ...args);
+      };
+    }`,
+  });
+  await page.goto("?lang=en");
+  await expect(page.locator("#result-count")).toHaveText("2 pharmacies");
+  await expect(page.locator(".map-pane")).toContainText("The map can't be shown");
+});
+
 test.describe("on a phone", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
