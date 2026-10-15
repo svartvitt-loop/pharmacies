@@ -1,6 +1,6 @@
 """Fetch duty schedules for yesterday..today+N days and write a single JSON file.
 
-Usage: uv run python -m fsa_scraper --days 14 --out ../web/public/data/duties.json
+Usage: uv run python -m fsa_scraper --days 55 --out ../web/public/data/duties.json
 """
 
 import argparse
@@ -45,7 +45,7 @@ def pharmacy_id(name: str, address: str) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--days", type=int, default=14, help="days ahead of today to fetch")
+    parser.add_argument("--days", type=int, default=55, help="days ahead of today to fetch (FSA publishes ~8 weeks)")
     parser.add_argument("--delay", type=float, default=1.0, help="seconds between requests")
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
