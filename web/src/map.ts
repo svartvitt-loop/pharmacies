@@ -45,10 +45,10 @@ const PALETTE = {
   halo: "#ffffff",
 };
 const ROAD_COLORS: Record<string, string> = {
-  motorway: "#f08a3c",
-  trunk: "#f6a64a",
-  primary: "#fcc94b",
-  secondary: "#fde68a",
+  motorway: "#f4bf91",
+  trunk: "#f7cc9f",
+  primary: "#f9dfa6",
+  secondary: "#fcecc2",
 };
 const ROAD_FILL = "#ffffff"; // tertiary, minor, service, pedestrian
 
