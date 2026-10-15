@@ -9,8 +9,32 @@ import type { LatLng, Result } from "./state";
 setWorkerUrl(workerUrl);
 
 const ATHENS: [number, number] = [23.7275, 37.9838];
-const COLORS = { open: "#15803d", closing: "#d97706", later: "#2563eb" } as const;
+const COLORS = { open: "#16a34a", closing: "#f59e0b", later: "#2563eb" } as const;
 const SORT = { later: 0, closing: 1, open: 2 } as const; // open pharmacies drawn on top
+
+/** A pharmacy cross with a white outline, drawn at 2x for sharp rendering. */
+function crossImage(color: string): ImageData {
+  const size = 52;
+  const pad = 5; // room for the outline
+  const arm = 16; // arm thickness
+  const a = (size - arm) / 2;
+  const b = a + arm;
+  const e = size - pad;
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+  const points = [[a, pad], [b, pad], [b, a], [e, a], [e, b], [b, b], [b, e], [a, e], [a, b], [pad, b], [pad, a], [a, a]];
+  ctx.beginPath();
+  points.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+  ctx.closePath();
+  ctx.lineJoin = "round";
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = "#ffffff";
+  ctx.stroke();
+  ctx.fillStyle = color;
+  ctx.fill();
+  return ctx.getImageData(0, 0, size, size);
+}
 
 // Always a light, colourful map (also in dark mode), in the spirit of classic street maps.
 const PALETTE = {
@@ -148,16 +172,19 @@ export class PharmacyMap {
     this.map.on("load", () => {
       this.map.addSource("pharmacies", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       this.map.addSource("you", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      for (const [s, color] of Object.entries(COLORS)) {
+        this.map.addImage(`cross-${s}`, crossImage(color), { pixelRatio: 2 });
+      }
       this.map.addLayer({
         id: "pharmacies",
-        type: "circle",
+        type: "symbol",
         source: "pharmacies",
-        layout: { "circle-sort-key": ["get", "sort"] },
-        paint: {
-          "circle-color": ["get", "color"],
-          "circle-radius": ["interpolate", ["linear"], ["zoom"], 9, 5, 15, 9],
-          "circle-stroke-color": "#ffffff",
-          "circle-stroke-width": 2,
+        layout: {
+          "icon-image": ["get", "icon"],
+          "icon-size": ["interpolate", ["linear"], ["zoom"], 9, 0.65, 15, 1],
+          "icon-allow-overlap": true,
+          "icon-ignore-placement": true,
+          "symbol-sort-key": ["get", "sort"],
         },
       });
       this.map.addLayer({
@@ -202,7 +229,7 @@ export class PharmacyMap {
         return {
           type: "Feature" as const,
           geometry: { type: "Point" as const, coordinates: [r.pharmacy.lng!, r.pharmacy.lat!] },
-          properties: { id: r.pharmacy.id, color: COLORS[s], sort: SORT[s] },
+          properties: { id: r.pharmacy.id, icon: `cross-${s}`, sort: SORT[s] },
         };
       });
     (this.map.getSource("pharmacies") as GeoJSONSource).setData({ type: "FeatureCollection", features });
