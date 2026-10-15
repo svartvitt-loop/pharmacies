@@ -5,6 +5,13 @@ on:
     - cron: "17 */3 * * *" # every 3 hours (UTC); FSA publishes changes during the day
   push:
     branches: [main]
+    # Changes that can't affect the built site don't need a build and deploy.
+    paths-ignore:
+      - "**.md"
+      - ".gitignore"
+      - "LICENSE*"
+      - ".claude/**"
+      - ".vscode/**"
   workflow_dispatch:
 
 permissions:
