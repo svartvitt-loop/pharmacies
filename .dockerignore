@@ -5,5 +5,7 @@
 **/.venv
 **/__pycache__
 **/.pytest_cache
+web/test-results
+web/playwright-report
 # Mounted at run time instead, so data refreshes don't need a rebuild.
 web/public/data

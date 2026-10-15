@@ -53,7 +53,7 @@ One workflow, two jobs: **build** (test, scrape or restore, build, upload) → *
 | `web` | Vite dev server with hot reload; source bind-mounted | http://localhost:5173 |
 | `preview` (profile `preview`) | Production build in nginx under `/pharmacies/`, like GitHub Pages | http://localhost:8080/pharmacies/ |
 | `caddy` (profile `lan`) | HTTPS for phones on the LAN, in front of `web` and `preview` | https://&lt;LAN_IP&gt;:8443/ |
-| `test` (profile `tools`) | Playwright smoke tests in Google Chrome, against their own dev server | — |
+| `e2e` (profile `tools`) | Playwright smoke tests in Google Chrome, against their own dev server | — |
 
 ```bash
 cp .env.example .env                         # once; set HOST_UID/HOST_GID if not 1000, LAN_IP for phones
@@ -61,7 +61,7 @@ docker compose up                            # data + dev server
 docker compose up --build preview            # + production build (rebuild after code changes)
 docker compose --profile preview --profile lan up --build   # everything, incl. HTTPS for phones
 ./dev check                                  # lint, type-check, Playwright and scraper tests
-./dev help                                   # all tasks: up, lint, typecheck, build, test, npm …, sh …
+./dev help                                   # all tasks: up, lint, typecheck, build, e2e, npm …, sh …
 docker compose down                          # stop (keep volumes: the caddy CA lives in one)
 ```
 
@@ -79,7 +79,7 @@ docker compose down                          # stop (keep volumes: the caddy CA 
 - Containers run as `HOST_UID:HOST_GID` (default 1000), so `duties.json` is owned by you.
 - **`./dev`** wraps `docker compose run --rm --no-deps …`, so dev tasks never need Node or Python on
   the host: `npm`/`npx` run in `web`, `uv`/`python`/`pytest` in `data`, the Playwright tests in
-  `test`. Claude Code is held to this in this repo: `.claude/settings.json` denies host toolchain
+  `e2e`. Claude Code is held to this in this repo: `.claude/settings.json` denies host toolchain
   commands, and a `PreToolUse` hook (`.claude/hooks/require-docker.sh`) also catches them inside
   compound commands. The hook reads every `|` as a pipe, so it can block e.g. `perl -pe 's|a|npm|'`.
 - **Overhead of `./dev`:** each task starts and removes a container, about 0.5 s (0.9 s the first
@@ -89,7 +89,7 @@ docker compose down                          # stop (keep volumes: the caddy CA 
   |---|---|---|---|
   | `./dev lint` | 0.8 s | 0.06 s (oxlint) | ~0.7 s |
   | `./dev scraper-test` | 1.7 s | 0.2 s (pytest) | ~1.5 s, partly Python startup that the host has too |
-  | `./dev test` | 11 s | 9.7 s (Playwright) | ~1.3 s |
+  | `./dev e2e` | 11 s | 9.7 s (Playwright) | ~1.3 s |
   | hook, per Bash command | ~0 s | | |
 
   So quick tasks take 1–2 s instead of being instant, and slow ones barely change (about 10%).
@@ -97,7 +97,7 @@ docker compose down                          # stop (keep volumes: the caddy CA 
   `docker compose exec` into a running container instead (about 0.1–0.2 s).
 - `node_modules` is the ordinary `web/node_modules` in the bind-mounted checkout, installed by the
   containers as your user, so the editor on the host sees the same packages (types, oxlint). The
-  entrypoint of `web` and `test`, `docker/npm-deps.sh`, runs `npm ci` when `package-lock.json`
+  entrypoint of `web` and `e2e`, `docker/npm-deps.sh`, runs `npm ci` when `package-lock.json`
   changed since the last install, then runs the command; a `flock` on `web/` keeps two containers
   starting at once from installing over each other. (Until 2026-10-16 it was a named volume, which
   left an empty root-owned `web/node_modules` on the host; if an old checkout still has one,
@@ -111,8 +111,9 @@ docker compose down                          # stop (keep volumes: the caddy CA 
 - The preview mounts `web/public/data/` instead of baking it in, so new data needs no rebuild.
   nginx mimics Pages: `/pharmacies` → `/pharmacies/`, `Cache-Control: max-age=600`, `.mjs` as
   `text/javascript`.
-- Image versions follow CI: Node 24, Python 3.12, uv. The `test` image's tag must match
-  `@playwright/test` in `web/package-lock.json`.
+- Image versions follow CI: Node 24, Python 3.12, uv. The `e2e` image is built for
+  `PLAYWRIGHT_VERSION` in `docker/e2e.Dockerfile`, which must equal the exactly pinned
+  `@playwright/test` in `web/package.json`; bump both together.
 
 **Testing on a phone (`lan` profile).** Location ("Near me") needs a secure context, which a phone
 only gets over HTTPS. Caddy issues certificates from its own local CA:
@@ -140,7 +141,7 @@ uv run python -m fsa_scraper --days 55 --out ../web/public/data/duties.json   # 
 cd ../web
 npm install
 npm run dev        # http://localhost:5173
-npm test           # Playwright smoke tests (e2e/) in Google Chrome, against a fixed dataset
+npm run test:e2e   # Playwright smoke tests (e2e/) in Google Chrome, against a fixed dataset
 npm run build      # tsc -b (app + config/e2e) + vite build → web/dist
 npx vite preview   # serve web/dist (http://localhost:4173)
 ```

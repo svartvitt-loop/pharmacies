@@ -6,4 +6,4 @@
   Scopes used in this repo: `scraper`, `web`, `map`, `ci`.
 - Run nothing from the project's toolchains on the host: no `npm`, `npx`, `node`, `uv`, `python`,
   `pytest`, `playwright`, `tsc`, `vite` or `oxlint`. Use `./dev <task>` (`./dev help` lists them), or
-  `docker compose run --rm --no-deps <web|data|test> …` for anything else. A hook enforces this.
+  `docker compose run --rm --no-deps <web|data|e2e> …` for anything else. A hook enforces this.

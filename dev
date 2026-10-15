@@ -15,12 +15,12 @@ Usage: ./dev <task> [args…]
   lint                oxlint (web)
   typecheck           tsc -b (web: app, config files and e2e tests)
   build               type-check + production build into web/dist
-  test [args…]        Playwright smoke tests in Google Chrome; args go to playwright test
+  e2e [args…]         Playwright smoke tests in Google Chrome; args go to playwright test
   scraper-test [args…] pytest (scraper)
-  check               lint, typecheck, test and scraper-test
+  check               lint, typecheck, scraper-test and e2e
   npm|npx …           any npm/npx command in the web container, e.g. ./dev npm install leaflet
   uv|python|pytest …  any of these in the scraper container, e.g. ./dev uv add requests
-  sh [service]        shell in a container (web by default; data, test)
+  sh [service]        shell in a container (web by default; data, e2e)
 EOF
 }
 
@@ -32,9 +32,9 @@ case "$task" in
   lint)              run web npm run lint ;;
   typecheck)         run web npx tsc -b ;;
   build)             run web npm run build ;;
-  test)              run test npm test -- "$@" ;;
+  e2e)               run e2e npm run test:e2e -- "$@" ;;
   scraper-test)      run data uv run --locked pytest -q "$@" ;;
-  check)             "$0" lint && "$0" typecheck && "$0" test && "$0" scraper-test ;;
+  check)             "$0" lint && "$0" typecheck && "$0" scraper-test && "$0" e2e ;;
   npm | npx)         run web "$task" "$@" ;;
   uv)                run data uv "$@" ;;
   # uv run syncs the environment (a volume) from uv.lock first.

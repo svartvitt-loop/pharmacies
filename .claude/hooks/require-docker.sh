@@ -35,6 +35,6 @@ offender=$(printf '%s\n' "$cmd" | awk -v q="'" '
   }')
 
 if [ -n "$offender" ]; then
-  echo "Blocked: '$offender' would run on the host. Run it in a container instead: ./dev (see ./dev help), or docker compose run --rm --no-deps <web|data|test> …" >&2
+  echo "Blocked: '$offender' would run on the host. Run it in a container instead: ./dev (see ./dev help), or docker compose run --rm --no-deps <web|data|e2e> …" >&2
   exit 2
 fi

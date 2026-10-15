@@ -40,18 +40,18 @@ services:
     ports:
       - "127.0.0.1:5173:5173"
 
-  # Playwright smoke tests in Google Chrome, against their own dev server: ./dev test
-  test:
+  # Playwright smoke tests in Google Chrome, against their own dev server: ./dev e2e
+  e2e:
     profiles: [tools]
     build:
       context: .
-      dockerfile: docker/test.Dockerfile
+      dockerfile: docker/e2e.Dockerfile
     user: *user
     volumes:
       - ./web:/app/web
       - ./docker:/app/docker:ro
     entrypoint: ["/app/docker/npm-deps.sh"]
-    command: npm test
+    command: npm run test:e2e
     shm_size: 1gb # Chrome runs out of the default 64 MB of /dev/shm
 
   # Production build served like GitHub Pages: http://localhost:8080/pharmacies/
