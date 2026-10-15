@@ -28,7 +28,7 @@ One workflow, two jobs: **build** (test, scrape or restore, build, upload) → *
 | `schedule` — `17 */3 * * *` (every 3 h, UTC) | yes |
 | `workflow_dispatch` (manual "Run workflow") | yes |
 | `push` to `main` | no — restores the latest cached `duties.json`; scrapes only if no cache exists |
-| `push` touching only `**.md`, `.gitignore`, `LICENSE*`, `.claude/**`, `.vscode/**` | workflow doesn't run |
+| `push` touching only `**.md`, `.gitignore`, `LICENSE*`, `.claude/**`, `.vscode/**`, the Docker files (`compose.yaml`, `docker/**`, `.dockerignore`, `.env.example`) | workflow doesn't run |
 
 - **Data cache:** each scrape saves `duties.json` with key `duties-<DAYS>d-<run_id>`; pushes restore the
   newest key with prefix `duties-<DAYS>d-`. Cache keys can't be overwritten, hence one per run.

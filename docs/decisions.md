@@ -100,7 +100,7 @@ repo lives on another account. Renamed from `pharmarcies` to `pharmacies`.
 source; the day count is part of the cache key so changing it forces a scrape.
 
 **D25 — Documentation-only pushes don't run CI** (`paths-ignore`: Markdown, `.gitignore`, licence,
-editor/Claude settings).
+editor/Claude settings, the Docker dev environment).
 
 **D26 — Conventional Commits, one commit per change** (user rule, in `CLAUDE.md`). Earlier messages
 were rewritten to match.

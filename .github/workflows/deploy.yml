@@ -12,6 +12,10 @@ on:
       - "LICENSE*"
       - ".claude/**"
       - ".vscode/**"
+      - "compose.yaml"
+      - "docker/**"
+      - ".dockerignore"
+      - ".env.example"
   workflow_dispatch:
 
 permissions:
