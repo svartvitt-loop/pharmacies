@@ -127,3 +127,9 @@ image and owned by root, so `./dev uv …` failed (no writable uv cache for the 
 changed `uv.lock` silently needed `docker compose build data`. Now, like `node_modules`, the
 container installs on demand as the host user. It stays out of the checkout, unlike `node_modules`:
 a venv created in the container points at the container's Python, which the host doesn't have.
+
+**D30 — Unit tests for the pure logic (Vitest); `npm test` means unit tests.** The Playwright smoke
+tests only touch a few paths, while the code most likely to break quietly (Athens time and DST, time
+windows, matching and ordering, transliteration) is pure. That logic moved out of browser-bound
+modules (`filter.ts`, `geo.ts`, `format.ts`, `parseDataset()`) and got unit tests next to its source.
+Vitest reuses the Vite config. The Playwright tests became `test:e2e` / `./dev e2e`.

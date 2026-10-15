@@ -7,7 +7,9 @@ MapLibre map stays an imperative class (`map/index.ts`), wrapped by `components/
 are rendered by React into the popup element through a portal. The language is passed down through
 a context (`useI18n()`), never read from a module-level global, so memoized components re-render
 when it changes. `./dev lint` runs oxlint, including its React Compiler and Hooks rules.
-`./dev e2e` runs the Playwright smoke tests in `e2e/` in Google Chrome in the `e2e` container; they serve a
+The logic that decides what is shown is kept free of browser APIs (`filter.ts`, `time.ts`,
+`greek.ts`, `format.ts`, `parseDataset()` in `data.ts`) and unit-tested with Vitest next to its
+source (`*.test.ts`, `./dev test`). `./dev e2e` runs the Playwright smoke tests in `e2e/` in Google Chrome in the `e2e` container; they serve a
 small fixed dataset (`e2e/fixtures/duties.json`) and freeze the clock, so they don't depend on
 the scraped data.
 

@@ -20,6 +20,7 @@
       "Bash(playwright *)",
       "Bash(tsc *)",
       "Bash(vite *)",
+      "Bash(vitest *)",
       "Bash(oxlint *)"
     ]
   },

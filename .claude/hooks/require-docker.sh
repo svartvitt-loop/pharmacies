@@ -10,7 +10,7 @@ cmd=$(jq -r '.tool_input.command // empty')
 # variable assignments and prefixes such as env/sudo, and skip here-document bodies (commit messages).
 offender=$(printf '%s\n' "$cmd" | awk -v q="'" '
   BEGIN {
-    tools = "^(npm|npx|node|nodejs|pnpm|yarn|corepack|bun|deno|uv|uvx|pip|pip3|pipx|python|python3(\\.[0-9]+)?|pytest|playwright|tsc|vite|oxlint)$"
+    tools = "^(npm|npx|node|nodejs|pnpm|yarn|corepack|bun|deno|uv|uvx|pip|pip3|pipx|python|python3(\\.[0-9]+)?|pytest|playwright|tsc|vite|vitest|oxlint)$"
     prefixes = "^(sudo|env|exec|time|nohup|command|xargs|if|then|elif|else|while|until|do|!|\\{)$"
     heredoc_re = "<<-?[ \t]*[\"" q "]?[A-Za-z_][A-Za-z0-9_]*"
   }

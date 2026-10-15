@@ -38,8 +38,8 @@ With Docker (details in [docs/operations.md](docs/operations.md#local-developmen
 docker compose up                    # dev server with hot reload: http://localhost:5173
 docker compose up --build preview    # production build like GitHub Pages: http://localhost:8080/pharmacies/
 DATA_SOURCE=scrape docker compose up # real scrape instead of copying the live site's data
-./dev check                          # lint, type-check, Playwright and scraper tests, in containers
-./dev help                           # all tasks (build, e2e, npm …, sh …)
+./dev check                          # lint, type-check, unit, scraper and Playwright tests, in containers
+./dev help                           # all tasks (build, test, e2e, npm …, sh …)
 ```
 
 Without Docker:
@@ -54,6 +54,7 @@ uv run python -m fsa_scraper --days 55 --out ../web/public/data/duties.json
 cd ../web
 npm install
 npm run dev          # http://localhost:5173
+npm test             # unit tests (Vitest)
 npm run test:e2e     # Playwright smoke tests in the installed Google Chrome
 npm run build        # type-check + production build into web/dist
 ```

@@ -7,3 +7,4 @@ __pycache__/
 .env
 web/test-results/
 web/playwright-report/
+.claude/settings.local.json

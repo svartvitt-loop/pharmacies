@@ -6,8 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "typecheck": "tsc -b",
     "lint": "oxlint",
     "preview": "vite preview",
+    "test": "vitest run",
     "test:e2e": "playwright test"
   },
   "devDependencies": {
@@ -21,7 +23,8 @@
     "babel-plugin-react-compiler": "^1.0.0",
     "oxlint": "^1.88.0",
     "typescript": "^7.0.2",
-    "vite": "^8.3.4"
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
   },
   "dependencies": {
     "maplibre-gl": "^6.14.0",

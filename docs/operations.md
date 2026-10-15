@@ -60,8 +60,8 @@ cp .env.example .env                         # once; set HOST_UID/HOST_GID if no
 docker compose up                            # data + dev server
 docker compose up --build preview            # + production build (rebuild after code changes)
 docker compose --profile preview --profile lan up --build   # everything, incl. HTTPS for phones
-./dev check                                  # lint, type-check, Playwright and scraper tests
-./dev help                                   # all tasks: up, lint, typecheck, build, e2e, npm …, sh …
+./dev check                                  # lint, type-check, unit, scraper and Playwright tests
+./dev help                                   # all tasks: up, lint, typecheck, build, test, e2e, npm …, sh …
 docker compose down                          # stop (keep volumes: the caddy CA lives in one)
 ```
 
@@ -141,6 +141,7 @@ uv run python -m fsa_scraper --days 55 --out ../web/public/data/duties.json   # 
 cd ../web
 npm install
 npm run dev        # http://localhost:5173
+npm test           # unit tests (src/*.test.ts, Vitest)
 npm run test:e2e   # Playwright smoke tests (e2e/) in Google Chrome, against a fixed dataset
 npm run build      # tsc -b (app + config/e2e) + vite build → web/dist
 npx vite preview   # serve web/dist (http://localhost:4173)
@@ -153,6 +154,10 @@ only works over HTTPS or on `localhost`.
 
 - **Scraper:** pytest covers every observed hours format, unknown text, the DST night, and card parsing
   against a fictional HTML fixture shaped like the real response.
+- **Frontend unit tests** (`./dev test`, Vitest, `web/src/*.test.ts`) cover the pure logic: Athens
+  time across the DST change, every time window, matching and ordering, statuses and their texts,
+  transliteration, dataset parsing. They pass in any time zone (checked with `TZ=Pacific/Auckland`
+  and `America/Los_Angeles`).
 - **Frontend:** `npm run build` type-checks. Behaviour was checked in **headless Chrome via Playwright**
   (`playwright-core` pointed at the system Chrome with `--use-angle=swiftshader
   --enable-unsafe-swiftshader` so WebGL works without a GPU). Scripts loaded URLs with given filters,

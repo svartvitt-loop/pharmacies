@@ -50,6 +50,8 @@ web/
   src/map/markers.ts           cross marker images and colours per status
   src/i18n.ts, greek.ts        Greek/English strings; accent folding; transliteration
   src/style.css                layout (side-by-side ≥1024px, tabs below), light/dark tokens
+  src/*.test.ts                unit tests (Vitest) of the pure modules
+  e2e/                         Playwright smoke tests against a fixed dataset (fixtures/duties.json)
   public/data/                 generated duties.json (git-ignored)
 compose.yaml, docker/           local dev environment (data, dev server, preview, HTTPS for phones)
 docs/                          this documentation
