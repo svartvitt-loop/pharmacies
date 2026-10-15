@@ -30,10 +30,13 @@ load on the source site to a handful of requests per run. See [decisions.md](dec
 ```
 .github/workflows/deploy.yml   scrape → build → deploy (the only workflow)
 scraper/
-  fsa_scraper/__main__.py      CLI: fetch yesterday..today+N days, write duties.json
+  fsa_scraper/__main__.py      CLI: fetch yesterday..today+N days, check, write duties.json atomically
+  fsa_scraper/fetch.py         the POST per date, with retries
   fsa_scraper/parse.py         HTML fragment → DutyCard objects
   fsa_scraper/hours.py         "8 ΠΡΩΙ - 11 ΒΡΑΔΥ" → (start, end) intervals in Europe/Athens
-  tests/                       pytest: hours formats, DST, card parsing (fictional fixture)
+  fsa_scraper/dataset.py       cards per date → the duties.json structure; checks before publishing
+  tests/                       pytest: hours formats, DST, card parsing (fictional fixture), dataset
+                               assembly and checks, retries, the CLI's stop/skip rules
 web/
   index.html                   page head and the #root element
   src/main.tsx, App.tsx        React entry; App owns the state and wires filters ↔ list ↔ map

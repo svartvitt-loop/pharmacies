@@ -32,7 +32,8 @@
   hours are unknown; Piraeus is not covered. Tracked in [../TODO.md](../TODO.md); options in
   [data-source.md](data-source.md#alternatives-that-were-evaluated).
 - **Depends on the FSA HTML.** If the site changes its markup or blocks the scraper, scheduled runs fail
-  and the site keeps serving the last data, which then slowly goes stale. Only the footer's "Updated"
+  and the site keeps serving the last data, which then slowly goes stale. A partial change (cards still
+  found, hours unreadable) also fails the run rather than publishing an empty site. Only the footer's "Updated"
   time shows this; there is no staleness warning yet.
 - **No reuse licence** for the FSA data. The scraper is deliberately light (one request per second,
   every 3 hours) and credits the source; contacting the association was suggested but hasn't happened.

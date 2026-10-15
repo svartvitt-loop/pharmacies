@@ -133,3 +133,9 @@ tests only touch a few paths, while the code most likely to break quietly (Athen
 windows, matching and ordering, transliteration) is pure. That logic moved out of browser-bound
 modules (`filter.ts`, `geo.ts`, `format.ts`, `parseDataset()`) and got unit tests next to its source.
 Vitest reuses the Vite config. The Playwright tests became `test:e2e` / `./dev e2e`.
+
+**D31 — The scraper refuses to publish implausible data and stops early.** Exiting non-zero keeps the
+last good site up, so it is the safe reaction to anything that looks like a changed source: no
+readable hours today, or most hours unreadable (cards found but fields moved). A few unreadable
+hours still only log a warning. When today can't be fetched, the run stops at the second request
+instead of loading the source with 55 more that it would discard.

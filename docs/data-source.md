@@ -66,7 +66,9 @@ The hours are free text in Greek capitals. Observed formats (5 sampled dates, ~3
 - Wall-clock times are built first and the `Europe/Athens` zone attached afterwards, so a night duty
   across the DST change is right (2026-10-24 21:00+03:00 → 2026-10-25 08:00+02:00; there is a test).
 - Unparseable text logs a warning and stores the duty with empty intervals instead of failing the run.
-  So far every duty has parsed.
+  So far every duty has parsed. If none of today's duties or more than half of all duties can't be
+  read, the run fails instead and nothing is written: that means the format changed, and publishing
+  would show an empty site (`problems()` in `dataset.py`).
 
 ## Coverage
 
@@ -91,8 +93,9 @@ version showed fewer than half of the pharmacies, and why even 55 days may still
 ## Load on the source
 
 One request per date with a 1-second delay and up to 3 retries: 57 requests (~1 minute) per scheduled
-run, every 3 hours. Pushes that change only code reuse the cached file and make no requests
-(see [operations.md](operations.md)). The site footer credits the association and tells users to call
+run, every 3 hours. If today can't be fetched the run stops right there (the second request) instead
+of fetching dates it would throw away. Pushes that change only code reuse the cached file and make no
+requests (see [operations.md](operations.md)). The site footer credits the association and tells users to call
 before going, since duties can change at short notice.
 
 ## Alternatives that were evaluated

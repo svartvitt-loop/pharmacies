@@ -34,8 +34,10 @@ One workflow, two jobs: **build** (test, scrape or restore, build, upload) → *
   newest key with prefix `duties-<DAYS>d-`. Cache keys can't be overwritten, hence one per run.
   `DAYS` (currently 55) is part of the key, so changing it forces a fresh scrape on the next push.
   GitHub evicts caches unused for 7 days; the next push then simply scrapes.
-- **Failure behaviour:** the scraper exits non-zero if it can't fetch *today*; the job fails and the
-  previously deployed site stays up. Individual future dates that fail are skipped with a log line.
+- **Failure behaviour:** the scraper exits non-zero if it can't fetch *today* (it stops right away),
+  or if the result looks broken (no readable hours today, or most hours unreadable); the job fails
+  and the previously deployed site stays up. Individual future dates that fail are skipped with a
+  log line. The output file is written atomically.
 - Scraper unit tests run before every build.
 - `concurrency: pages` without cancelling: overlapping runs queue instead of racing.
 - GitHub pauses scheduled workflows after **60 days without repository activity**; re-enable in the

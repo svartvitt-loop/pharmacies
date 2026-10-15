@@ -4,43 +4,19 @@ Usage: uv run python -m fsa_scraper --days 55 --out ../web/public/data/duties.js
 """
 
 import argparse
-import hashlib
 import json
 import logging
 import sys
 import time
-import urllib.parse
-import urllib.request
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-from .hours import ATHENS, HoursParseError, parse_intervals
-from .parse import parse_cards
-
-SOURCE = "https://fsa-efimeries.gr/"
-ENDPOINT = SOURCE + "Home/FilteredHomeResults"
-USER_AGENT = "AthensDutyPharmacies/0.1 (static site; polite scheduled fetch)"
+from .dataset import build_dataset, problems
+from .fetch import FETCH_ERRORS, SOURCE, fetch_day
+from .hours import ATHENS
+from .parse import DutyCard, parse_cards
 
 log = logging.getLogger("fsa_scraper")
-
-
-def fetch_day(day: date, retries: int = 3) -> str:
-    body = urllib.parse.urlencode({"Date": day.isoformat(), "IsOpen": "false"}).encode()
-    request = urllib.request.Request(ENDPOINT, data=body, headers={"User-Agent": USER_AGENT})
-    for attempt in range(1, retries + 1):
-        try:
-            with urllib.request.urlopen(request, timeout=30) as response:
-                return response.read().decode("utf-8")
-        except OSError as exc:
-            if attempt == retries:
-                raise
-            log.warning("fetch %s failed (%s), retrying", day, exc)
-            time.sleep(5 * attempt)
-    raise AssertionError("unreachable")
-
-
-def pharmacy_id(name: str, address: str) -> str:
-    return hashlib.sha1(f"{name}|{address}".encode()).hexdigest()[:10]
 
 
 def main() -> int:
@@ -54,56 +30,45 @@ def main() -> int:
     today = datetime.now(ATHENS).date()
     days = [today + timedelta(days=i) for i in range(-1, args.days + 1)]
 
-    pharmacies: dict[str, dict] = {}
-    duties: list[dict] = []
-    fetched_dates: list[str] = []
-
+    cards_by_day: dict[date, list[DutyCard]] = {}
     for i, day in enumerate(days):
         if i:
             time.sleep(args.delay)
         try:
             cards = parse_cards(fetch_day(day))
-        except OSError as exc:
+        except FETCH_ERRORS as exc:
             log.error("giving up on %s: %s", day, exc)
-            continue
-        if not cards:
-            log.warning("no duties listed for %s", day)
-            continue
-        fetched_dates.append(day.isoformat())
-        for card in cards:
-            pid = pharmacy_id(card.name, card.address)
-            pharmacies.setdefault(pid, {
-                "id": pid,
-                "name": card.name,
-                "address": card.address,
-                "area": card.area,
-                "phone": card.phone,
-                "lat": card.lat,
-                "lng": card.lng,
-            })
-            try:
-                intervals = [[s.isoformat(), e.isoformat()] for s, e in parse_intervals(card.hours, day)]
-            except HoursParseError as exc:
-                log.warning("%s (%s): %s", card.name, day, exc)
-                intervals = []
-            duties.append({"p": pid, "date": day.isoformat(), "hours": card.hours, "intervals": intervals})
-        log.info("%s: %d duties", day, len(cards))
+            cards = []
+        else:
+            if not cards:
+                log.warning("no duties listed for %s", day)
+        if not cards and day == today:
+            # The output would be useless without today; don't load the source with the other dates.
+            log.error("could not fetch today's duties; stopping without writing output")
+            return 1
+        if cards:
+            cards_by_day[day] = cards
+            log.info("%s: %d duties", day, len(cards))
 
-    if today.isoformat() not in fetched_dates:
-        log.error("could not fetch today's duties; not writing output")
+    dataset = build_dataset(cards_by_day, datetime.now(ATHENS), SOURCE)
+    if found := problems(dataset, today):
+        for problem in found:
+            log.error("%s; not writing output", problem)
         return 1
+    if missing := sum(1 for p in dataset["pharmacies"] if p["lat"] is None):
+        log.warning("%d pharmacies have no coordinates, so they won't be on the map", missing)
 
-    out = {
-        "generatedAt": datetime.now(ATHENS).isoformat(timespec="seconds"),
-        "source": SOURCE,
-        "dates": fetched_dates,
-        "pharmacies": sorted(pharmacies.values(), key=lambda p: (p["area"], p["name"])),
-        "duties": duties,
-    }
-    args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-    log.info("wrote %d pharmacies, %d duties to %s", len(pharmacies), len(duties), args.out)
+    write_atomically(args.out, json.dumps(dataset, ensure_ascii=False, separators=(",", ":")))
+    log.info("wrote %d pharmacies, %d duties to %s", len(dataset["pharmacies"]), len(dataset["duties"]), args.out)
     return 0
+
+
+def write_atomically(path: Path, text: str) -> None:
+    """Write beside the target, then rename, so a reader (the dev server) never sees half a file."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(text, encoding="utf-8")
+    tmp.replace(path)
 
 
 if __name__ == "__main__":
