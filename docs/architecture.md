@@ -1,0 +1,90 @@
+# Architecture
+
+## Overview
+
+There is no backend and no database. A scheduled job scrapes the official duty schedule into one JSON
+file, the static site is built around it, and the browser does all filtering.
+
+```
+GitHub Actions (cron every 3h, on push, on demand)
+  │
+  ├─ scraper/ (Python) ── POST fsa-efimeries.gr/Home/FilteredHomeResults × 57 dates
+  │     parse HTML cards → normalise hours into Athens-time intervals
+  │     → web/public/data/duties.json   (cached between runs, see operations.md)
+  │
+  ├─ web/ (Vite + TypeScript) ── npm run build → web/dist (page, JS, CSS, data, MapLibre worker)
+  │
+  └─ actions/deploy-pages → https://svartvitt-loop.github.io/pharmacies/
+
+Browser
+  loads data/duties.json once → filters by time window, area, distance → list + map
+  map tiles and fonts: tiles.openfreemap.org (vector)
+```
+
+Why this shape: the data changes a few times a day at most and is small (~170 KB gzipped), so a static
+file regenerated on a schedule is the simplest thing that works, costs nothing to host, and keeps the
+load on the source site to a handful of requests per run. See [decisions.md](decisions.md).
+
+## Repository layout
+
+```
+.github/workflows/deploy.yml   scrape → build → deploy (the only workflow)
+scraper/
+  fsa_scraper/__main__.py      CLI: fetch yesterday..today+N days, write duties.json
+  fsa_scraper/parse.py         HTML fragment → DutyCard objects
+  fsa_scraper/hours.py         "8 ΠΡΩΙ - 11 ΒΡΑΔΥ" → (start, end) intervals in Europe/Athens
+  tests/                       pytest: hours formats, DST, card parsing (fictional fixture)
+web/
+  index.html                   page skeleton (header, filters, view bar, list, map, footer)
+  src/main.ts                  wiring: state ↔ controls ↔ list ↔ map; timers
+  src/state.ts                 filter state, URL sync, time windows, filtering and sorting
+  src/data.ts                  loads duties.json into Pharmacy objects with epoch-ms intervals
+  src/time.ts                  Athens time-zone helpers (independent of the visitor's zone)
+  src/list.ts, render.ts       cards, status texts, links
+  src/map.ts                   MapLibre map, custom style, cross markers, popups
+  src/i18n.ts, greek.ts        Greek/English strings; accent folding; transliteration
+  src/style.css                layout (side-by-side ≥1024px, tabs below), light/dark tokens
+  public/data/                 generated duties.json (git-ignored)
+docs/                          this documentation
+CLAUDE.md                      commit conventions; TODO.md open work
+```
+
+## The data file: `web/public/data/duties.json`
+
+One file, written by the scraper, read once by the browser.
+
+```jsonc
+{
+  "generatedAt": "2026-10-15T18:04:54+03:00",   // Athens time
+  "source": "https://fsa-efimeries.gr/",
+  "dates": ["2026-10-14", …, "2026-12-09"],      // dates that returned at least one duty
+  "pharmacies": [
+    { "id": "80bbca14df", "name": "…", "address": "…", "area": "ΚΥΨΕΛΗ",
+      "phone": "2100000000", "lat": 37.99, "lng": 23.74 }
+  ],
+  "duties": [
+    { "p": "80bbca14df", "date": "2026-10-14",
+      "hours": "8 ΠΡΩΙ - 2 ΜΕΣΗΜΕΡΙ & 5 ΑΠΟΓΕΥΜΑ - 8 ΠΡΩΙ ΕΠΟΜΕΝΗΣ",      // original text
+      "intervals": [["2026-10-14T08:00:00+03:00", "2026-10-14T14:00:00+03:00"],
+                    ["2026-10-14T17:00:00+03:00", "2026-10-15T08:00:00+03:00"]] }
+  ]
+}
+```
+
+- `id` is `sha1(name|address)[:10]`; the FSA card id is a *duty* id, not a pharmacy id, so it can't be
+  used to recognise the same pharmacy on different dates.
+- Intervals are ISO strings with the Athens UTC offset, so the browser compares plain epoch times and
+  daylight-saving changes are already resolved by the scraper.
+- Size with 57 dates: ~2,500 pharmacies, ~4,300 duties, 1.3 MB raw, ~170 KB gzipped.
+
+## Runtime flow in the browser
+
+1. `readState()` restores filters from the URL (language also from `localStorage`/browser language).
+2. `loadDataset()` fetches the JSON and builds `Pharmacy` objects with sorted `{start, end}` intervals.
+3. `filterPharmacies()` computes the time window, keeps pharmacies whose intervals overlap it (or all,
+   with "show closed"), applies area and radius filters, and sorts.
+4. The list renders the results (on wide screens only those inside the visible map area); the map
+   updates its GeoJSON source without moving the camera.
+5. A one-minute timer and tab re-focus re-run the filtering so "open now" statuses stay correct.
+
+Details of each step are in [frontend.md](frontend.md) and [map.md](map.md).

@@ -6,6 +6,8 @@ Greek and English UI.
 
 **Live:** https://svartvitt-loop.github.io/pharmacies/
 
+Design, decisions and known issues are documented in [docs/](docs/README.md).
+
 ## How it works
 
 ```
@@ -15,12 +17,12 @@ GitHub Actions (every 3h) ──► scraper/ (Python) ──► web/public/data/
 - **Data source:** [fsa-efimeries.gr](https://fsa-efimeries.gr/), the official duty schedule of the
   Pharmaceutical Association of Attica. For each date the scraper POSTs to `/Home/FilteredHomeResults`
   and parses the returned cards (name, address, area, phone, coordinates, hours). It fetches yesterday
-  (for overnight shifts still running) through 55 days ahead (the whole published schedule, so every
-  pharmacy in the rotation appears at least once), one request per second.
+  (for overnight shifts still running) through 55 days ahead (the whole published schedule), one
+  request per second.
 - **Hours** such as `8 ΠΡΩΙ - 2 ΜΕΣΗΜΕΡΙ & 5 ΑΠΟΓΕΥΜΑ - 8 ΠΡΩΙ ΕΠΟΜΕΝΗΣ` are converted to concrete
   Athens-time intervals (`scraper/fsa_scraper/hours.py`), including overnight shifts and DST changes.
 - **Frontend** loads the single JSON file and filters in the browser. Filters live in the URL, so any
-  view can be shared. Map tiles: OpenStreetMap via Leaflet.
+  view can be shared. Map: MapLibre GL with a custom streets-only style on OpenFreeMap vector tiles.
 
 ### Limitations
 
