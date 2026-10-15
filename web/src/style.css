@@ -309,8 +309,8 @@ select {
   border: 1px solid var(--border);
 }
 
-body[data-view="list"] .map-pane,
-body[data-view="map"] .list {
+.app[data-view="list"] .map-pane,
+.app[data-view="map"] .list {
   display: none;
 }
 
@@ -326,7 +326,7 @@ body[data-view="map"] .list {
     gap: 16px;
   }
 
-  body[data-view] .list {
+  .app[data-view] .list {
     display: grid;
     grid-template-columns: 1fr;
     max-height: calc(100vh - 150px);
@@ -334,7 +334,7 @@ body[data-view="map"] .list {
     padding-right: 4px;
   }
 
-  body[data-view] .map-pane {
+  .app[data-view] .map-pane {
     display: block;
     position: sticky;
     top: 16px;

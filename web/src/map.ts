@@ -1,8 +1,8 @@
 import { LngLatBounds, Map as MapLibre, NavigationControl, Popup, setWorkerUrl, type GeoJSONSource } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
-import { lang, t } from "./i18n";
-import { directionsUrl, display, el, hoursText, status, statusText } from "./render";
+import type { Lang } from "./i18n";
+import { status } from "./render";
 import { onDuty, type LatLng, type Result } from "./state";
 
 // The bundle can't find MapLibre's worker next to itself, so point it at the emitted copy.
@@ -79,7 +79,7 @@ function roadWidth(extra = 0): unknown[] {
   return ["interpolate", ["exponential", 1.6], ["zoom"], 10, stop(0), 16, stop(1), 19, stop(2)];
 }
 
-type Fit = "results" | "athens" | false;
+export type Fit = "results" | "athens" | false;
 
 export interface Bounds {
   west: number;
@@ -89,8 +89,8 @@ export interface Bounds {
 }
 
 /** Street names in Greek, or OpenMapTiles' Latin transliteration in the English UI. */
-function streetName(): unknown {
-  return lang() === "en" ? ["coalesce", ["get", "name:latin"], ["get", "name"]] : ["get", "name"];
+function streetName(lang: Lang): unknown {
+  return lang === "en" ? ["coalesce", ["get", "name:latin"], ["get", "name"]] : ["get", "name"];
 }
 
 function streetLayer(id: string) {
@@ -134,7 +134,7 @@ function minimalStyle() {
         minzoom: 13,
         layout: {
           "symbol-placement": "line",
-          "text-field": streetName(),
+          "text-field": streetName("el"),
           "text-font": ["Noto Sans Regular"],
           "text-size": ["interpolate", ["linear"], ["zoom"], 13, 10.5, 17, 13.5],
         },
@@ -150,14 +150,23 @@ export class PharmacyMap {
   private pending: (() => void) | null = null;
   private pendingFit: Fit = false;
   private results = new Map<string, Result>();
-  private now = Date.now();
-  private lang = lang();
+  private lang: Lang = "el"; // the style starts with Greek street names
   private popup = new Popup({ maxWidth: "280px", offset: 12 });
   private near: LatLng | null = null;
   private popupId: string | null = null;
+  private settle: ReturnType<typeof setTimeout> | undefined;
 
-  /** onMove receives the visible area whenever the map stops moving or is resized. */
-  constructor(container: HTMLElement, onMove: (bounds: Bounds) => void) {
+  /**
+   * onMove receives the visible area whenever the map stops moving or is resized.
+   * Popups show popupContent; onPopup reports which pharmacy it should describe (null when closed)
+   * and must fill popupContent before returning.
+   */
+  constructor(
+    container: HTMLElement,
+    private popupContent: HTMLElement,
+    onMove: (bounds: Bounds) => void,
+    private onPopup: (id: string | null) => void,
+  ) {
     this.map = new MapLibre({
       container,
       style: minimalStyle() as never, // the style-spec types aren't exported by maplibre-gl
@@ -166,20 +175,23 @@ export class PharmacyMap {
       maxZoom: 19,
     });
     this.map.addControl(new NavigationControl({ showCompass: false }), "top-left");
+    this.popup.on("close", () => {
+      this.popupId = null;
+      this.onPopup(null);
+    });
     const reportBounds = () => {
       const b = this.map.getBounds();
       onMove({ west: b.getWest(), south: b.getSouth(), east: b.getEast(), north: b.getNorth() });
     };
     // Report only once the map has settled. A scroll-wheel zoom, pinch or pan with inertia fires
     // several moveend events mid-gesture; waiting for a quiet moment keeps the list from jumping.
-    let settle: ReturnType<typeof setTimeout> | undefined;
     const reportWhenSettled = () => {
-      clearTimeout(settle);
-      settle = setTimeout(() => {
+      clearTimeout(this.settle);
+      this.settle = setTimeout(() => {
         if (!this.map.isMoving()) reportBounds();
       }, SETTLE_MS);
     };
-    this.map.on("movestart", () => clearTimeout(settle));
+    this.map.on("movestart", () => clearTimeout(this.settle));
     this.map.on("moveend", reportWhenSettled);
     this.map.on("resize", reportWhenSettled);
     this.map.on("load", () => {
@@ -220,25 +232,21 @@ export class PharmacyMap {
     });
   }
 
-  update(results: Result[], now: number, near: LatLng | null, fit: Fit): void {
+  update(results: Result[], now: number, near: LatLng | null, lang: Lang, fit: Fit): void {
     if (!this.ready) {
       // Only the latest data matters, but don't lose a fit requested by an earlier call.
       this.pendingFit = fit || this.pendingFit;
-      this.pending = () => this.update(results, now, near, this.pendingFit);
+      this.pending = () => this.update(results, now, near, lang, this.pendingFit);
       return;
     }
-    this.now = now;
     this.near = near;
     this.results = new Map(results.map((r) => [r.pharmacy.id, r]));
-    // Keep an open popup (with fresh content) while its pharmacy is still listed.
-    if (this.popupId && this.popup.isOpen()) {
-      if (this.results.has(this.popupId)) this.openPopup(this.popupId);
-      else this.popup.remove();
-    }
+    // Keep an open popup while its pharmacy is still listed; its content follows the results.
+    if (this.popupId && !this.results.has(this.popupId)) this.popup.remove();
 
-    if (this.lang !== lang()) {
-      this.lang = lang();
-      this.map.setLayoutProperty("street-names", "text-field", streetName() as never);
+    if (this.lang !== lang) {
+      this.lang = lang;
+      this.map.setLayoutProperty("street-names", "text-field", streetName(lang) as never);
     }
 
     const features = results
@@ -293,29 +301,18 @@ export class PharmacyMap {
     this.map.resize();
   }
 
-  private openPopup(id: string): void {
-    const result = this.results.get(id);
-    const p = result?.pharmacy;
-    if (!result || !p || p.lat === null || p.lng === null) return;
-    this.popupId = id;
-    this.popup.setLngLat([p.lng, p.lat]).setDOMContent(popupContent(result, this.now)).addTo(this.map);
+  destroy(): void {
+    clearTimeout(this.settle);
+    this.map.remove();
   }
-}
 
-function popupContent(result: Result, now: number): HTMLElement {
-  const p = result.pharmacy;
-  return el(
-    "div",
-    { className: "popup" },
-    el("strong", {}, display(p.name)),
-    el("div", {}, `${display(p.address)}, ${display(p.area)}`),
-    el("div", { className: `status status-${status(result, now)}` }, statusText(result, now)),
-    el("div", { className: "muted" }, hoursText(result).join(" · ")),
-    el(
-      "div",
-      { className: "popup-actions" },
-      el("a", { href: `tel:${p.phone}` }, `☎ ${p.phone}`),
-      el("a", { href: directionsUrl(p), target: "_blank", rel: "noopener" }, t("directions")),
-    ),
-  );
+  private openPopup(id: string): void {
+    const p = this.results.get(id)?.pharmacy;
+    if (!p || p.lat === null || p.lng === null) return;
+    this.popup.remove();
+    // Fill the content before the popup measures itself (addTo picks the side that fits).
+    this.popupId = id;
+    this.onPopup(id);
+    this.popup.setLngLat([p.lng, p.lat]).setDOMContent(this.popupContent).addTo(this.map);
+  }
 }

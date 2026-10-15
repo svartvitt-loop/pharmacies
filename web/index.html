@@ -9,70 +9,7 @@
     <title>Εφημερεύοντα φαρμακεία</title>
   </head>
   <body>
-    <header class="topbar">
-      <div class="brand">
-        <span class="logo" aria-hidden="true">✚</span>
-        <div>
-          <h1 data-i18n="title"></h1>
-          <p class="subtitle" data-i18n="subtitle"></p>
-        </div>
-      </div>
-      <button id="lang-toggle" class="lang-toggle" type="button"></button>
-    </header>
-
-    <section class="filters" aria-label="Filters">
-      <div class="filter-group">
-        <span class="filter-label" data-i18n="when"></span>
-        <div id="when-presets" class="chips" role="group"></div>
-        <div id="custom-range" class="custom-range" hidden>
-          <label><span data-i18n="date"></span><input id="custom-date" type="date" /></label>
-          <label><span data-i18n="from"></span><input id="custom-from" type="time" step="900" /></label>
-          <label><span data-i18n="to"></span><input id="custom-to" type="time" step="900" /></label>
-        </div>
-      </div>
-
-      <div class="filter-group">
-        <span class="filter-label" data-i18n="areas"></span>
-        <div class="area-picker">
-          <div id="area-chips" class="chips"></div>
-          <input id="area-search" type="search" autocomplete="off" />
-          <ul id="area-suggestions" class="suggestions" role="listbox" hidden></ul>
-        </div>
-      </div>
-
-      <div class="filter-group near">
-        <button id="near-me" class="chip" type="button"></button>
-        <label id="radius-label" hidden>
-          <span data-i18n="radius"></span>
-          <select id="radius"></select>
-        </label>
-        <span id="near-status" class="muted" aria-live="polite"></span>
-      </div>
-
-      <div class="filter-group near">
-        <button id="show-closed" class="chip" type="button" data-i18n="showClosed"></button>
-      </div>
-    </section>
-
-    <div class="view-bar">
-      <p id="result-count" aria-live="polite"></p>
-      <div class="view-tabs" role="tablist">
-        <button id="tab-list" role="tab" type="button" data-view="list" data-i18n="list"></button>
-        <button id="tab-map" role="tab" type="button" data-view="map" data-i18n="map"></button>
-      </div>
-    </div>
-
-    <main class="views">
-      <section id="list" class="list" aria-labelledby="tab-list"></section>
-      <section class="map-pane" aria-labelledby="tab-map"><div id="map"></div></section>
-    </main>
-
-    <footer class="footer">
-      <p data-i18n="disclaimer"></p>
-      <p data-i18n="scope"></p>
-      <p><a href="https://fsa-efimeries.gr/" target="_blank" rel="noopener" data-i18n="source"></a> · <span id="updated"></span></p>
-    </footer>
-
-    <script type="module" src="/src/main.ts"></script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

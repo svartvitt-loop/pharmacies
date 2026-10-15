@@ -1,3 +1,6 @@
+import { createContext, use } from "react";
+import { transliterate } from "./greek";
+
 export type Lang = "el" | "en";
 
 const strings = {
@@ -108,37 +111,44 @@ const strings = {
 type Strings = (typeof strings)["el"];
 export type StringKey = { [K in keyof Strings]: Strings[K] extends string ? K : never }[keyof Strings];
 
-let current: Lang = "el";
-
-export function setLang(lang: Lang): void {
-  current = lang;
-  document.documentElement.lang = lang;
-  document.title = strings[lang].title;
-  document.querySelectorAll<HTMLElement>("[data-i18n]").forEach((el) => {
-    el.textContent = t(el.dataset.i18n as StringKey);
-  });
+export interface I18n {
+  lang: Lang;
+  locale: string;
+  t(key: StringKey): string;
+  /** Pharmacy text as stored (Greek capitals) or transliterated for the English UI. */
+  display(text: string): string;
+  results(n: number): string;
+  inMapArea(shown: number, total: number): string;
+  closedCount(n: number): string;
 }
 
-export function lang(): Lang {
-  return current;
+function makeI18n(lang: Lang): I18n {
+  const s = strings[lang];
+  return {
+    lang,
+    locale: lang === "el" ? "el-GR" : "en-GB",
+    t: (key) => s[key],
+    display: (text) => (lang === "en" ? transliterate(text) : text),
+    results: s.results,
+    inMapArea: s.inMapArea,
+    closedCount: s.closedCount,
+  };
 }
 
-export function t(key: StringKey): string {
-  return strings[current][key];
+const I18N = { el: makeI18n("el"), en: makeI18n("en") };
+
+export const I18nContext = createContext<I18n>(I18N.el);
+
+export function i18nFor(lang: Lang): I18n {
+  return I18N[lang];
 }
 
-export function resultsLabel(n: number): string {
-  return strings[current].results(n);
+export function useI18n(): I18n {
+  return use(I18nContext);
 }
 
-export function inMapAreaLabel(shown: number, total: number): string {
-  return strings[current].inMapArea(shown, total);
-}
-
-export function closedCountLabel(n: number): string {
-  return strings[current].closedCount(n);
-}
-
-export function locale(): string {
-  return current === "el" ? "el-GR" : "en-GB";
+/** The page language and title, which live outside the React tree. */
+export function applyToDocument(i18n: I18n): void {
+  document.documentElement.lang = i18n.lang;
+  document.title = i18n.t("title");
 }
