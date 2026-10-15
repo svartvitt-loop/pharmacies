@@ -19,7 +19,7 @@ Usage: ./dev <task> [args…]
   scraper-test [args…] pytest (scraper)
   check               lint, typecheck, test and scraper-test
   npm|npx …           any npm/npx command in the web container, e.g. ./dev npm install leaflet
-  uv|python|pytest …  any of these in the scraper container
+  uv|python|pytest …  any of these in the scraper container, e.g. ./dev uv add requests
   sh [service]        shell in a container (web by default; data, test)
 EOF
 }
@@ -33,10 +33,12 @@ case "$task" in
   typecheck)         run web npx tsc -b ;;
   build)             run web npm run build ;;
   test)              run test npm test -- "$@" ;;
-  scraper-test)      run data pytest -q "$@" ;;
+  scraper-test)      run data uv run --locked pytest -q "$@" ;;
   check)             "$0" lint && "$0" typecheck && "$0" test && "$0" scraper-test ;;
   npm | npx)         run web "$task" "$@" ;;
-  uv | python | pytest) run data "$task" "$@" ;;
+  uv)                run data uv "$@" ;;
+  # uv run syncs the environment (a volume) from uv.lock first.
+  python | pytest)   run data uv run --locked "$task" "$@" ;;
   sh)                run "${1:-web}" sh ;;
   help | -h | --help) usage ;;
   *)                 usage >&2; exit 2 ;;

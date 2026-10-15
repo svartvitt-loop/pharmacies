@@ -102,6 +102,10 @@ docker compose down                          # stop (keep volumes: the caddy CA 
   starting at once from installing over each other. (Until 2026-10-16 it was a named volume, which
   left an empty root-owned `web/node_modules` on the host; if an old checkout still has one,
   `docker volume rm pharmacies_web_node_modules` and `rmdir web/node_modules`.)
+- The scraper's Python environment lives in the `scraper_venv` volume. `uv run --locked` (the `data`
+  service, `./dev python|pytest|scraper-test`) syncs it from `uv.lock` first, so dependency changes
+  need no image rebuild and `./dev uv add|lock|…` work as usual. `--locked` stops with an error when
+  `pyproject.toml` and `uv.lock` disagree; `./dev uv lock` fixes that.
 - Ports 5173 and 8080 listen on `127.0.0.1` only; the `lan` profile's 8443/8081 listen on all
   interfaces (Docker bypasses ufw).
 - The preview mounts `web/public/data/` instead of baking it in, so new data needs no rebuild.

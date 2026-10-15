@@ -121,3 +121,9 @@ cost: the host's editor had no packages, and Docker left an empty root-owned `we
 behind. The containers run as the host user, so they now install into `web/node_modules` directly;
 a `flock` keeps concurrent installs apart. *Cost:* the packages are Linux builds, so on a macOS or
 Windows host the tools in that folder wouldn't run natively (the editor's TypeScript still works).
+
+**D29 — The scraper's environment in a volume, synced by `uv run --locked`.** It was baked into the
+image and owned by root, so `./dev uv …` failed (no writable uv cache for the host user) and a
+changed `uv.lock` silently needed `docker compose build data`. Now, like `node_modules`, the
+container installs on demand as the host user. It stays out of the checkout, unlike `node_modules`:
+a venv created in the container points at the container's Python, which the host doesn't have.

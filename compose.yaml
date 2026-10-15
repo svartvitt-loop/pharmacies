@@ -16,11 +16,12 @@ services:
       - ./scraper:/app/scraper
       - ./web:/app/web
       - ./docker:/app/docker:ro
+      - scraper_venv:/opt/venv
     environment:
       DATA_SOURCE: ${DATA_SOURCE:-download} # download | scrape | keep
       DATA_MAX_AGE_HOURS: ${DATA_MAX_AGE_HOURS:-1}
       DAYS: ${DAYS:-55}
-    command: python /app/docker/data.py
+    command: uv run --locked python /app/docker/data.py
 
   # Vite dev server with hot reload: http://localhost:5173
   web:
@@ -85,4 +86,5 @@ services:
       - "8081:80"
 
 volumes:
+  scraper_venv:
   caddy_data:
