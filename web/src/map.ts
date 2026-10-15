@@ -11,6 +11,7 @@ setWorkerUrl(workerUrl);
 const ATHENS: [number, number] = [23.7275, 37.9838];
 const COLORS = { open: "#16a34a", closing: "#f59e0b", later: "#2563eb", closed: "#9ca3af" } as const;
 const SORT = { closed: -1, later: 0, closing: 1, open: 2 } as const; // open pharmacies drawn on top
+const SETTLE_MS = 400; // quiet time after the last map movement before the list follows the map
 
 /** A pharmacy cross with a white outline, drawn at 2x for sharp rendering. */
 function crossImage(color: string): ImageData {
@@ -168,8 +169,18 @@ export class PharmacyMap {
       const b = this.map.getBounds();
       onMove({ west: b.getWest(), south: b.getSouth(), east: b.getEast(), north: b.getNorth() });
     };
-    this.map.on("moveend", reportBounds);
-    this.map.on("resize", reportBounds);
+    // Report only once the map has settled. A scroll-wheel zoom, pinch or pan with inertia fires
+    // several moveend events mid-gesture; waiting for a quiet moment keeps the list from jumping.
+    let settle: ReturnType<typeof setTimeout> | undefined;
+    const reportWhenSettled = () => {
+      clearTimeout(settle);
+      settle = setTimeout(() => {
+        if (!this.map.isMoving()) reportBounds();
+      }, SETTLE_MS);
+    };
+    this.map.on("movestart", () => clearTimeout(settle));
+    this.map.on("moveend", reportWhenSettled);
+    this.map.on("resize", reportWhenSettled);
     this.map.on("load", () => {
       this.map.addSource("pharmacies", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       this.map.addSource("you", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
