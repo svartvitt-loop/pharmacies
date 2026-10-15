@@ -8,8 +8,10 @@ file, the static site is built around it, and the browser does all filtering.
 ```
 GitHub Actions (cron every 3h, on push, on demand)
   │
+  ├─ tests: ruff + pytest (scraper); oxlint, tsc, Vitest, Playwright (web) — a failure stops here
+  │
   ├─ scraper/ (Python) ── POST fsa-efimeries.gr/Home/FilteredHomeResults × 57 dates
-  │     parse HTML cards → normalise hours into Athens-time intervals
+  │     parse HTML cards → normalise hours into Athens-time intervals → check
   │     → web/public/data/duties.json   (cached between runs, see operations.md)
   │
   ├─ web/ (Vite + TypeScript) ── npm run build → web/dist (page, JS, CSS, data, MapLibre worker)
@@ -28,7 +30,8 @@ load on the source site to a handful of requests per run. See [decisions.md](dec
 ## Repository layout
 
 ```
-.github/workflows/deploy.yml   scrape → build → deploy (the only workflow)
+.github/workflows/deploy.yml   test → scrape → build → deploy (the only workflow)
+.github/dependabot.yml         monthly dependency-update pull requests
 scraper/
   fsa_scraper/__main__.py      CLI: fetch yesterday..today+N days, check, write duties.json atomically
   fsa_scraper/fetch.py         the POST per date, with retries
@@ -56,7 +59,8 @@ web/
   src/*.test.ts                unit tests (Vitest) of the pure modules
   e2e/                         Playwright smoke tests against a fixed dataset (fixtures/duties.json)
   public/data/                 generated duties.json (git-ignored)
-compose.yaml, docker/           local dev environment (data, dev server, preview, HTTPS for phones)
+compose.yaml, docker/          local dev environment (data, dev server, e2e tests, preview, HTTPS for phones)
+dev                            runs every dev task in a container (`./dev help`)
 docs/                          this documentation
 CLAUDE.md                      commit conventions; TODO.md open work
 ```
