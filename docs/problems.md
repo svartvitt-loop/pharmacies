@@ -23,6 +23,7 @@
 | Another session edited the same files while a change was being committed | Shared working tree | Staged only the relevant hunk (`git apply --cached`) so the other work stayed uncommitted |
 | Overpass (OSM) research query failed | `502 Bad Gateway` from overpass-api.de, a mirror returned HTML | Retried; the main endpoint answered on the second try |
 | Map tiles didn't render in the Docker preview ("Worker failed to load") | nginx has no MIME type for `.mjs` and served MapLibre's worker as `application/octet-stream`; Pages sends `text/javascript` | `types { text/javascript mjs; }` in `docker/nginx.conf` |
+| Area search box narrower and the "Radius" text touching its select after the React port | The port dropped the `#area-search` and `#radius-label` ids that `style.css` still targeted | Classes `.area-search` and `.radius-label` |
 
 ## Known issues and limitations (open)
 

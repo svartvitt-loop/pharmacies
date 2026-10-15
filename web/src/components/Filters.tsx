@@ -84,7 +84,7 @@ export function Filters({ state, data, now, onChange }: Props) {
         <button className="chip" type="button" aria-pressed={!!state.near} onClick={toggleNear}>
           {state.near ? t("nearMeOn") : t("nearMe")}
         </button>
-        <label hidden={!state.near}>
+        <label className="radius-label" hidden={!state.near}>
           <span>{t("radius")}</span>
           <select value={state.radiusKm} onChange={(e) => onChange({ radiusKm: Number(e.target.value) })}>
             {RADII_KM.map((km) => (

@@ -184,7 +184,7 @@ a {
 }
 
 .custom-range label,
-#radius-label {
+.radius-label {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -209,7 +209,7 @@ select {
   gap: 6px;
 }
 
-#area-search {
+.area-search {
   width: 220px;
   max-width: 100%;
 }

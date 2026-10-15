@@ -64,6 +64,7 @@ export function AreaPicker({ state, data, now, onChange }: Props) {
         ))}
       </div>
       <input
+        className="area-search"
         type="search"
         autoComplete="off"
         placeholder={t("areaPlaceholder")}
