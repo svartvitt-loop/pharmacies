@@ -28,10 +28,30 @@ jobs:
         working-directory: scraper
         run: uv run pytest -q
 
+      # Push builds reuse the data from the latest scheduled scrape, so code changes
+      # deploy without hitting the source. Cache keys are immutable, hence one per run.
+      - name: Restore cached duty schedules
+        id: duties-cache
+        if: github.event_name == 'push'
+        uses: actions/cache/restore@v6
+        with:
+          path: web/public/data/duties.json
+          key: duties-${{ github.run_id }}
+          restore-keys: duties-
+
+      # Runs on schedule/dispatch, or on push when nothing was cached.
       # If the source is down this step fails and the previously deployed site stays up.
       - name: Fetch duty schedules
+        if: steps.duties-cache.outputs.cache-matched-key == ''
         working-directory: scraper
         run: uv run python -m fsa_scraper --days 14 --out ../web/public/data/duties.json
+
+      - name: Cache duty schedules
+        if: steps.duties-cache.outputs.cache-matched-key == ''
+        uses: actions/cache/save@v6
+        with:
+          path: web/public/data/duties.json
+          key: duties-${{ github.run_id }}
 
       - uses: actions/setup-node@v5
         with:
