@@ -88,9 +88,23 @@ Statuses are relative to the real current time even when the window is in the fu
 timer and returning to the tab refresh them.
 
 Each card: area, name, address, status, the matching duty hours (`Fri 16/10 17:00–08:00 (+1)`), and
-actions: **Call** (`tel:`), **Directions** (Google Maps directions to the coordinates), **On map**,
+actions: **Call** (`tel:`), **Directions** (with a directions icon; see below), **On map**,
 **More info** (a Google search for the pharmacy; the original "products" idea was left out because
 no source has that data).
+
+**Directions** (on the cards and in map popups, `components/DirectionsLink.tsx`) opens the device's
+maps app on phones and a website elsewhere, chosen from the user agent (`mapsPlatform()`):
+
+| Device | Opens | Shows |
+|---|---|---|
+| iPhone / iPad | `https://maps.apple.com/?ll=…&q=<name>` → Apple Maps | the pharmacy as a labelled pin |
+| Android | `geo:<lat>,<lng>?q=<lat>,<lng>(<name>)` → the default maps app | the pharmacy as a labelled pin |
+| Desktop | Google Maps in a new tab | directions to the pharmacy |
+
+On phones the app's own Directions button is then one tap away: `geo:` has no portable way to ask for
+a route, and showing the place lets the user pick the travel mode. Pharmacies without coordinates are
+looked up by address. iOS always opens Apple Maps, even if another navigation app was made the default
+(EU, iOS 18.4+). App links don't open a new tab, which would be left empty.
 
 ## List and map together
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Pharmacy } from "./data";
 import { filterPharmacies, type When } from "./filter";
-import { directionsUrl, distanceText, hoursText, intervalText, statusText } from "./format";
+import { directionsUrl, distanceText, hoursText, intervalText, mapsPlatform, statusText } from "./format";
 import { i18nFor } from "./i18n";
 
 const at = Date.parse;
@@ -82,11 +82,34 @@ describe("distanceText", () => {
   });
 });
 
+describe("mapsPlatform", () => {
+  it("tells iOS (including iPadOS posing as a Mac) and Android from the rest", () => {
+    expect(mapsPlatform("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)", 5)).toBe("ios");
+    expect(mapsPlatform("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)", 5)).toBe("ios");
+    expect(mapsPlatform("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)", 0)).toBe("web");
+    expect(mapsPlatform("Mozilla/5.0 (Linux; Android 15; Pixel 9)", 5)).toBe("android");
+    expect(mapsPlatform("Mozilla/5.0 (X11; Linux x86_64)", 0)).toBe("web");
+  });
+});
+
 describe("directionsUrl", () => {
-  it("goes to the coordinates, or else to the address", () => {
-    expect(directionsUrl(pharmacy([]))).toBe("https://www.google.com/maps/dir/?api=1&destination=37.98%2C23.73");
-    expect(directionsUrl(pharmacy([], { lat: null, lng: null }))).toBe(
-      `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent("ΑΘΗΝΑΣ 50, ΑΘΗΝΑ")}`,
-    );
+  const name = encodeURIComponent("ΦΑΡΜΑΚΕΙΟ");
+  const address = encodeURIComponent("ΑΘΗΝΑΣ 50, ΑΘΗΝΑ");
+  const unlocated = pharmacy([], { lat: null, lng: null });
+
+  it("on the web, Google Maps directions to the coordinates, or else to the address", () => {
+    expect(directionsUrl(pharmacy([]), "web")).toBe("https://www.google.com/maps/dir/?api=1&destination=37.98%2C23.73");
+    expect(directionsUrl(unlocated, "web")).toBe(`https://www.google.com/maps/dir/?api=1&destination=${address}`);
+  });
+
+  it("on iOS, a labelled pin in Apple Maps", () => {
+    expect(directionsUrl(pharmacy([]), "ios")).toBe(`https://maps.apple.com/?ll=37.98,23.73&q=${name}`);
+    expect(directionsUrl(unlocated, "ios")).toBe(`https://maps.apple.com/?q=${address}`);
+  });
+
+  it("on Android, a labelled pin in the default maps app", () => {
+    expect(directionsUrl(pharmacy([]), "android")).toBe(`geo:37.98,23.73?q=37.98,23.73(${name})`);
+    expect(directionsUrl(pharmacy([], { name: "Α (Β)" }), "android")).toBe(`geo:37.98,23.73?q=37.98,23.73(${encodeURIComponent("Α Β")})`);
+    expect(directionsUrl(unlocated, "android")).toBe(`geo:0,0?q=${address}`);
   });
 });

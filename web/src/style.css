@@ -467,6 +467,14 @@ select {
   color: var(--muted);
 }
 
+.icon {
+  width: 1.15em;
+  height: 1.15em;
+  margin-right: 4px;
+  vertical-align: -0.2em;
+  fill: currentColor;
+}
+
 .empty {
   padding: 24px;
   text-align: center;

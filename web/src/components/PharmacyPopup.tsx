@@ -1,10 +1,11 @@
 import { status, type Result } from "../filter";
-import { directionsUrl, hoursText, statusText } from "../format";
+import { hoursText, statusText } from "../format";
 import { useI18n } from "../i18n";
+import { DirectionsLink } from "./DirectionsLink";
 
 export function PharmacyPopup({ result, now }: { result: Result; now: number }) {
   const i18n = useI18n();
-  const { t, display } = i18n;
+  const { display } = i18n;
   const p = result.pharmacy;
   return (
     <div className="popup">
@@ -14,9 +15,7 @@ export function PharmacyPopup({ result, now }: { result: Result; now: number }) 
       <div className="muted">{hoursText(result, i18n).join(" · ")}</div>
       <div className="popup-actions">
         <a href={`tel:${p.phone}`}>☎ {p.phone}</a>
-        <a href={directionsUrl(p)} target="_blank" rel="noopener">
-          {t("directions")}
-        </a>
+        <DirectionsLink pharmacy={p} />
       </div>
     </div>
   );

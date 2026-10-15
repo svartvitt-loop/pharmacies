@@ -1,6 +1,7 @@
 import { status, type Result } from "../filter";
-import { directionsUrl, distanceText, hoursText, moreInfoUrl, statusText } from "../format";
+import { distanceText, hoursText, moreInfoUrl, statusText } from "../format";
 import { useI18n } from "../i18n";
+import { DirectionsLink } from "./DirectionsLink";
 
 interface Props {
   result: Result;
@@ -33,9 +34,7 @@ export function PharmacyCard({ result, now, onShowOnMap }: Props) {
         <a className="btn primary" href={`tel:${p.phone}`}>
           ☎ {t("call")} {p.phone}
         </a>
-        <a className="btn" href={directionsUrl(p)} target="_blank" rel="noopener">
-          {t("directions")}
-        </a>
+        <DirectionsLink className="btn" pharmacy={p} />
         <button type="button" className="btn" onClick={() => onShowOnMap(p.id)}>
           {t("showOnMap")}
         </button>

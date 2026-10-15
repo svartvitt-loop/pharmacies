@@ -80,3 +80,21 @@ test.describe("on a phone", () => {
     await expect(page).toHaveURL(/view=map/);
   });
 });
+
+test("directions open Google Maps in a new tab on the desktop", async ({ page }) => {
+  await page.goto("?lang=en");
+  const link = page.locator(".card").first().getByRole("link", { name: "Directions" });
+  await expect(link).toHaveAttribute("href", "https://www.google.com/maps/dir/?api=1&destination=37.9841%2C23.7281");
+  await expect(link).toHaveAttribute("target", "_blank");
+});
+
+test.describe("on an Android phone", () => {
+  test.use({ userAgent: "Mozilla/5.0 (Linux; Android 15; Pixel 9) Mobile", viewport: { width: 390, height: 844 } });
+
+  test("directions open the default maps app", async ({ page }) => {
+    await page.goto("?lang=en");
+    const link = page.locator(".card").first().getByRole("link", { name: "Directions" });
+    await expect(link).toHaveAttribute("href", /^geo:37\.9841,23\.7281\?q=37\.9841,23\.7281\(/);
+    await expect(link).not.toHaveAttribute("target");
+  });
+});
