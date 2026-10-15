@@ -40,8 +40,11 @@ chose to ship it directly and check on the live site.
 GitHub Actions scrapes and builds, GitHub Pages hosts. Free, nothing to run, low load on the source.
 *Cost:* data is up to 3 hours old; no server-side features.
 
-**D9 — Stack (user's choices):** plain TypeScript (no framework) with Vite; Python scraper; GitHub
-Pages; Greek and English UI.
+**D9 — Stack (user's choices):** TypeScript with Vite; Python scraper; GitHub Pages; Greek and
+English UI. The frontend started as plain TypeScript with no framework and was ported to React 19
+(with the React Compiler) once the hand-written DOM updates grew. The MapLibre map stays an
+imperative class wrapped by one component; react-map-gl would add little over it. Linting uses oxlint
+because typescript-eslint doesn't support TypeScript 7.
 
 **D10 — One JSON file for everything.** Simpler than per-date files; the browser needs most dates for
 "show closed" and next-duty anyway. Revisit if it grows much.

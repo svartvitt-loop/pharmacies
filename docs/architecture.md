@@ -35,13 +35,15 @@ scraper/
   fsa_scraper/hours.py         "8 ΠΡΩΙ - 11 ΒΡΑΔΥ" → (start, end) intervals in Europe/Athens
   tests/                       pytest: hours formats, DST, card parsing (fictional fixture)
 web/
-  index.html                   page skeleton (header, filters, view bar, list, map, footer)
-  src/main.ts                  wiring: state ↔ controls ↔ list ↔ map; timers
+  index.html                   page head and the #root element
+  src/main.tsx, App.tsx        React entry; App owns the state and wires filters ↔ list ↔ map
+  src/hooks.ts                 data loading, one-minute clock, media query
+  src/components/              header, filters, area picker, view bar, list, cards, map, popup, footer
   src/state.ts                 filter state, URL sync, time windows, filtering and sorting
   src/data.ts                  loads duties.json into Pharmacy objects with epoch-ms intervals
   src/time.ts                  Athens time-zone helpers (independent of the visitor's zone)
-  src/list.ts, render.ts       cards, status texts, links
-  src/map.ts                   MapLibre map, custom style, cross markers, popups
+  src/render.ts                status texts, links
+  src/map.ts                   MapLibre map (imperative class), custom style, cross markers, popups
   src/i18n.ts, greek.ts        Greek/English strings; accent folding; transliteration
   src/style.css                layout (side-by-side ≥1024px, tabs below), light/dark tokens
   public/data/                 generated duties.json (git-ignored)

@@ -1,7 +1,12 @@
 # Frontend behaviour
 
-Plain TypeScript with no framework. The page is one HTML skeleton (`web/index.html`); `main.ts`
-re-renders the controls, list and map from a single `State` object whenever it changes.
+React 19 with the React Compiler (no hand-written memoization), built with Vite. `web/index.html`
+only holds the page head and a `#root` element. `App.tsx` owns a single `State` object; the
+results, counts and list are derived from it on each render, and URL sync is an effect. The
+MapLibre map stays an imperative class (`map.ts`), wrapped by `components/MapView.tsx`; its popups
+are rendered by React into the popup element through a portal. The language is passed down through
+a context (`useI18n()`), never read from a module-level global, so memoized components re-render
+when it changes. `npm run lint` runs oxlint, including its React Compiler and Hooks rules.
 
 ## Layout
 
