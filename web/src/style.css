@@ -256,6 +256,16 @@ select {
   font-weight: 600;
 }
 
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--brand);
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .view-tabs {
   display: flex;
   border: 1px solid var(--border);

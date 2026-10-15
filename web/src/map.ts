@@ -55,6 +55,13 @@ function roadWidth(extra = 0): unknown[] {
 
 type Fit = "results" | "athens" | false;
 
+export interface Bounds {
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+}
+
 /** Street names in Greek, or OpenMapTiles' Latin transliteration in the English UI. */
 function streetName(): unknown {
   return lang() === "en" ? ["coalesce", ["get", "name:latin"], ["get", "name"]] : ["get", "name"];
@@ -120,8 +127,10 @@ export class PharmacyMap {
   private now = Date.now();
   private lang = lang();
   private popup = new Popup({ maxWidth: "280px", offset: 12 });
+  private near: LatLng | null = null;
 
-  constructor(container: HTMLElement) {
+  /** onMove receives the visible area whenever the map stops moving or is resized. */
+  constructor(container: HTMLElement, onMove: (bounds: Bounds) => void) {
     this.map = new MapLibre({
       container,
       style: minimalStyle() as never, // the style-spec types aren't exported by maplibre-gl
@@ -130,6 +139,12 @@ export class PharmacyMap {
       maxZoom: 19,
     });
     this.map.addControl(new NavigationControl({ showCompass: false }), "top-left");
+    const reportBounds = () => {
+      const b = this.map.getBounds();
+      onMove({ west: b.getWest(), south: b.getSouth(), east: b.getEast(), north: b.getNorth() });
+    };
+    this.map.on("moveend", reportBounds);
+    this.map.on("resize", reportBounds);
     this.map.on("load", () => {
       this.map.addSource("pharmacies", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       this.map.addSource("you", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
@@ -171,6 +186,7 @@ export class PharmacyMap {
       return;
     }
     this.now = now;
+    this.near = near;
     this.results = new Map(results.map((r) => [r.pharmacy.id, r]));
     this.popup.remove();
 
@@ -198,11 +214,18 @@ export class PharmacyMap {
     if (fit === "athens") {
       this.map.jumpTo({ center: ATHENS, zoom: 12 });
     } else if (fit === "results") {
-      const bounds = new LngLatBounds();
-      features.forEach((f) => bounds.extend(f.geometry.coordinates as [number, number]));
-      if (near) bounds.extend([near.lng, near.lat]);
-      if (!bounds.isEmpty()) this.map.fitBounds(bounds, { padding: 40, maxZoom: 15, duration: 0 });
+      this.fitResults();
     }
+  }
+
+  /** Zoom so that every current result (and the user's position) is visible. */
+  fitResults(): void {
+    const bounds = new LngLatBounds();
+    for (const { pharmacy: p } of this.results.values()) {
+      if (p.lat !== null && p.lng !== null) bounds.extend([p.lng, p.lat]);
+    }
+    if (this.near) bounds.extend([this.near.lng, this.near.lat]);
+    if (!bounds.isEmpty()) this.map.fitBounds(bounds, { padding: 40, maxZoom: 15, duration: 0 });
   }
 
   focus(id: string): void {

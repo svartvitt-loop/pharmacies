@@ -1,11 +1,11 @@
 import "./style.css";
 import { loadDataset, type Dataset } from "./data";
 import { fold } from "./greek";
-import { resultsLabel, setLang, t } from "./i18n";
+import { inMapAreaLabel, resultsLabel, setLang, t } from "./i18n";
 import { renderList } from "./list";
-import { PharmacyMap } from "./map";
+import { PharmacyMap, type Bounds } from "./map";
 import { display, el } from "./render";
-import { RADII_KM, WHEN_OPTIONS, filterPharmacies, readState, windowCovered, writeState, type View } from "./state";
+import { RADII_KM, WHEN_OPTIONS, filterPharmacies, readState, windowCovered, writeState, type Result, type View } from "./state";
 import { athensDate, formatClock, formatDay } from "./time";
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -13,10 +13,18 @@ const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getEleme
 const state = readState(Date.now());
 let data: Dataset | null = null;
 let fitPending = false;
+let results: Result[] = [];
+let emptyMessage = "";
+// With list and map side by side, the list follows the visible map area.
+const sideBySide = matchMedia("(min-width: 1024px)");
+let mapBounds: Bounds | null = null;
 
 const listEl = $("list");
 const mapEl = $("map");
-const map = new PharmacyMap(mapEl);
+const map = new PharmacyMap(mapEl, (bounds) => {
+  mapBounds = bounds;
+  renderResults();
+});
 const areaSearch = $<HTMLInputElement>("area-search");
 const suggestions = $<HTMLUListElement>("area-suggestions");
 const customDate = $<HTMLInputElement>("custom-date");
@@ -33,16 +41,38 @@ function commit(fit: boolean): void {
 function render(fit = false): void {
   if (!data) return;
   const now = Date.now();
-  const results = filterPharmacies(data.pharmacies, state, now);
-  const empty = windowCovered(data.dates, state, now) ? t("noResults") : t("outOfRange");
-  $("result-count").textContent = resultsLabel(results.length);
-  renderList(listEl, results, now, empty, showOnMap);
+  results = filterPharmacies(data.pharmacies, state, now);
+  emptyMessage = windowCovered(data.dates, state, now) ? t("noResults") : t("outOfRange");
+  renderResults(now);
   const mapVisible = mapEl.offsetWidth > 0;
   // Without an area or location filter, results span all of Attica; zooming to them hides the city.
   const fitMode = state.areas.length || state.near ? "results" : "athens";
   map.update(results, now, state.near, fit && mapVisible ? fitMode : false);
   if (fit && !mapVisible) fitPending = true;
 }
+
+function inBounds({ pharmacy: p }: Result, b: Bounds): boolean {
+  if (p.lat === null || p.lng === null) return true;
+  return p.lat >= b.south && p.lat <= b.north && p.lng >= b.west && p.lng <= b.east;
+}
+
+/** Result count and list; on wide screens only the pharmacies inside the visible map area. */
+function renderResults(now = Date.now()): void {
+  if (!data) return;
+  const bounds = sideBySide.matches ? mapBounds : null;
+  const shown = bounds ? results.filter((r) => inBounds(r, bounds)) : results;
+  const count = $("result-count");
+  if (shown.length < results.length) {
+    const showAll = el("button", { type: "button", className: "link-button" }, t("showAll"));
+    showAll.addEventListener("click", () => map.fitResults());
+    count.replaceChildren(inMapAreaLabel(shown.length, results.length), " · ", showAll);
+  } else {
+    count.textContent = resultsLabel(results.length);
+  }
+  renderList(listEl, shown, now, results.length ? t("noneInMapArea") : emptyMessage, showOnMap);
+}
+
+sideBySide.addEventListener("change", () => renderResults());
 
 function showOnMap(id: string): void {
   if (getComputedStyle(mapEl).display === "none" || mapEl.offsetWidth === 0) setView("map");

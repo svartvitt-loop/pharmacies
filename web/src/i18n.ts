@@ -26,6 +26,9 @@ const strings = {
     list: "Λίστα",
     map: "Χάρτης",
     results: (n: number) => (n === 1 ? "1 φαρμακείο" : `${n} φαρμακεία`),
+    inMapArea: (shown: number, total: number) => `${shown} από ${total} φαρμακεία στην περιοχή του χάρτη`,
+    showAll: "Εμφάνιση όλων",
+    noneInMapArea: "Κανένα φαρμακείο σε αυτή την περιοχή του χάρτη — απομακρύνετε τον χάρτη ή πατήστε «Εμφάνιση όλων».",
     noResults: "Δεν βρέθηκαν εφημερεύοντα φαρμακεία με αυτά τα φίλτρα.",
     outOfRange: "Δεν υπάρχει ακόμη πρόγραμμα εφημεριών για αυτό το διάστημα.",
     openNow: "Ανοιχτό τώρα",
@@ -71,6 +74,9 @@ const strings = {
     list: "List",
     map: "Map",
     results: (n: number) => (n === 1 ? "1 pharmacy" : `${n} pharmacies`),
+    inMapArea: (shown: number, total: number) => `${shown} of ${total} pharmacies in the map area`,
+    showAll: "Show all",
+    noneInMapArea: "No pharmacies in this part of the map — zoom out or press “Show all”.",
     noResults: "No on-duty pharmacies match these filters.",
     outOfRange: "The duty schedule for this period is not published yet.",
     openNow: "Open now",
@@ -117,6 +123,10 @@ export function t(key: StringKey): string {
 
 export function resultsLabel(n: number): string {
   return strings[current].results(n);
+}
+
+export function inMapAreaLabel(shown: number, total: number): string {
+  return strings[current].inMapArea(shown, total);
 }
 
 export function locale(): string {
