@@ -12,19 +12,64 @@ const ATHENS: [number, number] = [23.7275, 37.9838];
 const COLORS = { open: "#15803d", closing: "#d97706", later: "#2563eb" } as const;
 const SORT = { later: 0, closing: 1, open: 2 } as const; // open pharmacies drawn on top
 
-const dark = matchMedia("(prefers-color-scheme: dark)").matches;
-const PALETTE = dark
-  ? { background: "#1b2321", water: "#16302f", minor: "#34413d", major: "#4a5954", text: "#b8c5c0", halo: "#1b2321" }
-  : { background: "#f7f7f4", water: "#dce9ee", minor: "#e1e3de", major: "#c9cdc6", text: "#5b625e", halo: "#ffffff" };
+// Always a light, colourful map (also in dark mode), in the spirit of classic street maps.
+const PALETTE = {
+  background: "#f8f4ec",
+  water: "#8ccbf2",
+  casing: "#d3cab8",
+  text: "#2b2b2b",
+  halo: "#ffffff",
+};
+const ROAD_COLORS: Record<string, string> = {
+  motorway: "#f08a3c",
+  trunk: "#f6a64a",
+  primary: "#fcc94b",
+  secondary: "#fde68a",
+};
+const ROAD_FILL = "#ffffff"; // tertiary, minor, service, pedestrian
 
 const ROAD_CLASSES = ["motorway", "trunk", "primary", "secondary", "tertiary", "minor", "service"];
-const MAJOR = ["motorway", "trunk", "primary", "secondary"];
+// Line widths in pixels at zoom 10 / 16 / 19.
+const ROAD_WIDTHS: Record<string, [number, number, number]> = {
+  motorway: [2, 14, 40],
+  trunk: [1.8, 13, 38],
+  primary: [1.5, 12, 36],
+  secondary: [1.1, 11, 32],
+  tertiary: [0.7, 9, 28],
+  minor: [0.3, 7, 24],
+  service: [0.1, 4, 14],
+};
+const PEDESTRIAN_WIDTHS: [number, number, number] = [0.3, 5, 18];
+const ROAD_RANK = ["service", "minor", "tertiary", "secondary", "primary", "trunk", "motorway"];
+
+/** A MapLibre "match" on the road class. */
+function byClass<T>(values: Record<string, T>, fallback: T): unknown[] {
+  return ["match", ["get", "class"], ...Object.entries(values).flat(), fallback];
+}
+
+function roadWidth(extra = 0): unknown[] {
+  const stop = (i: 0 | 1 | 2) =>
+    byClass(Object.fromEntries(Object.entries(ROAD_WIDTHS).map(([k, w]) => [k, w[i] + extra])), PEDESTRIAN_WIDTHS[i] + extra);
+  return ["interpolate", ["exponential", 1.6], ["zoom"], 10, stop(0), 16, stop(1), 19, stop(2)];
+}
 
 type Fit = "results" | "athens" | false;
 
 /** Street names in Greek, or OpenMapTiles' Latin transliteration in the English UI. */
 function streetName(): unknown {
   return lang() === "en" ? ["coalesce", ["get", "name:latin"], ["get", "name"]] : ["get", "name"];
+}
+
+function streetLayer(id: string) {
+  return {
+    id,
+    type: "line",
+    source: "osm",
+    "source-layer": "transportation",
+    filter: ["any", ["in", ["get", "class"], ["literal", ROAD_CLASSES]], ["==", ["get", "subclass"], "pedestrian"]],
+    // Bigger roads are drawn above smaller ones.
+    layout: { "line-cap": "round", "line-join": "round", "line-sort-key": ["index-of", ["get", "class"], ["literal", ROAD_RANK]] },
+  };
 }
 
 /** A deliberately minimal style: background, water, streets and street names. Nothing else. */
@@ -43,26 +88,10 @@ function minimalStyle() {
     layers: [
       { id: "background", type: "background", paint: { "background-color": PALETTE.background } },
       { id: "water", type: "fill", source: "osm", "source-layer": "water", paint: { "fill-color": PALETTE.water } },
+      { ...streetLayer("street-casing"), paint: { "line-color": PALETTE.casing, "line-width": roadWidth(1.5) } },
       {
-        id: "streets",
-        type: "line",
-        source: "osm",
-        "source-layer": "transportation",
-        filter: [
-          "any",
-          ["in", ["get", "class"], ["literal", ROAD_CLASSES]],
-          ["==", ["get", "subclass"], "pedestrian"],
-        ],
-        layout: { "line-cap": "round", "line-join": "round" },
-        paint: {
-          "line-color": ["case", ["in", ["get", "class"], ["literal", MAJOR]], PALETTE.major, PALETTE.minor],
-          "line-width": [
-            "interpolate", ["exponential", 1.6], ["zoom"],
-            10, ["case", ["in", ["get", "class"], ["literal", MAJOR]], 1.5, 0.3],
-            16, ["case", ["in", ["get", "class"], ["literal", MAJOR]], 14, 7],
-            19, ["case", ["in", ["get", "class"], ["literal", MAJOR]], 40, 24],
-          ],
-        },
+        ...streetLayer("streets"),
+        paint: { "line-color": byClass(ROAD_COLORS, ROAD_FILL), "line-width": roadWidth() },
       },
       {
         id: "street-names",
@@ -74,9 +103,9 @@ function minimalStyle() {
           "symbol-placement": "line",
           "text-field": streetName(),
           "text-font": ["Noto Sans Regular"],
-          "text-size": ["interpolate", ["linear"], ["zoom"], 13, 10, 17, 13],
+          "text-size": ["interpolate", ["linear"], ["zoom"], 13, 10.5, 17, 13.5],
         },
-        paint: { "text-color": PALETTE.text, "text-halo-color": PALETTE.halo, "text-halo-width": 1.5 },
+        paint: { "text-color": PALETTE.text, "text-halo-color": PALETTE.halo, "text-halo-width": 2 },
       },
     ],
   };
