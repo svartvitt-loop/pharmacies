@@ -12,6 +12,7 @@ const ATHENS: [number, number] = [23.7275, 37.9838];
 const COLORS = { open: "#16a34a", closing: "#f59e0b", later: "#2563eb", closed: "#9ca3af" } as const;
 const SORT = { closed: -1, later: 0, closing: 1, open: 2 } as const; // open pharmacies drawn on top
 const SETTLE_MS = 400; // quiet time after the last map movement before the list follows the map
+const MAX_FLIGHT_MS = 2500; // cap for animated camera moves (On map, Show all)
 
 /** A pharmacy cross with a white outline, drawn at 2x for sharp rendering. */
 function crossImage(color: string): ImageData {
@@ -264,7 +265,8 @@ export class PharmacyMap {
   }
 
   /** Zoom so that every pharmacy on duty (or else every result) and the user's position are visible. */
-  fitResults(): void {
+  /** animate: fly there (user actions like "Show all"); otherwise jump (first load). */
+  fitResults(animate = false): void {
     const all = [...this.results.values()];
     const open = all.filter(onDuty);
     const bounds = new LngLatBounds();
@@ -272,14 +274,18 @@ export class PharmacyMap {
       if (p.lat !== null && p.lng !== null) bounds.extend([p.lng, p.lat]);
     }
     if (this.near) bounds.extend([this.near.lng, this.near.lat]);
-    if (!bounds.isEmpty()) this.map.fitBounds(bounds, { padding: 40, maxZoom: 15, duration: 0 });
+    if (bounds.isEmpty()) return;
+    this.map.fitBounds(bounds, { padding: 40, maxZoom: 15, ...(animate ? { maxDuration: MAX_FLIGHT_MS } : { duration: 0 }) });
   }
 
   focus(id: string): void {
     const p = this.results.get(id)?.pharmacy;
     if (!p || p.lat === null || p.lng === null) return;
-    this.map.jumpTo({ center: [p.lng, p.lat], zoom: Math.max(this.map.getZoom(), 15) });
-    this.openPopup(id);
+    // Fly instead of jumping so the user can follow where the map goes; open the popup on arrival
+    // (or wherever the flight ends if the user interrupts it).
+    this.popup.remove();
+    this.map.once("moveend", () => this.openPopup(id));
+    this.map.flyTo({ center: [p.lng, p.lat], zoom: Math.max(this.map.getZoom(), 15), maxDuration: MAX_FLIGHT_MS });
   }
 
   /** MapLibre must re-measure after its container changes from hidden to visible. */

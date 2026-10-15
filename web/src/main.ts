@@ -81,7 +81,7 @@ function renderResults(now = Date.now()): void {
   const closedNote = shownClosed ? [" · ", closedCountLabel(shownClosed)] : [];
   if (shownOpen < total) {
     const showAll = el("button", { type: "button", className: "link-button" }, t("showAll"));
-    showAll.addEventListener("click", () => map.fitResults());
+    showAll.addEventListener("click", () => map.fitResults(true));
     count.replaceChildren(inMapAreaLabel(shownOpen, total), ...closedNote, " · ", showAll);
   } else {
     count.replaceChildren(resultsLabel(total), ...closedNote);
