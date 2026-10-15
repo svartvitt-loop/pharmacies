@@ -446,7 +446,7 @@ body[data-view="map"] .list {
   color: #b91c1c;
 }
 
-/* Map popups (Leaflet keeps its own light styling) --------------------------- */
+/* Map popups (MapLibre keeps its own light styling) --------------------------- */
 
 .popup {
   display: grid;
