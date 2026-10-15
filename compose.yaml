@@ -34,7 +34,6 @@ services:
     volumes:
       - ./web:/app/web
       - ./docker:/app/docker:ro
-      - web_node_modules:/app/web/node_modules
     entrypoint: ["/app/docker/npm-deps.sh"]
     command: npm run dev -- --host 0.0.0.0 --port 5173 --strictPort
     ports:
@@ -50,7 +49,6 @@ services:
     volumes:
       - ./web:/app/web
       - ./docker:/app/docker:ro
-      - web_node_modules:/app/web/node_modules
     entrypoint: ["/app/docker/npm-deps.sh"]
     command: npm test
     shm_size: 1gb # Chrome runs out of the default 64 MB of /dev/shm
@@ -87,5 +85,4 @@ services:
       - "8081:80"
 
 volumes:
-  web_node_modules:
   caddy_data:

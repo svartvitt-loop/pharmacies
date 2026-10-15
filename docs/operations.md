@@ -95,9 +95,13 @@ docker compose down                          # stop (keep volumes: the caddy CA 
   So quick tasks take 1–2 s instead of being instant, and slow ones barely change (about 10%).
   `npm ci` only runs when `package-lock.json` changed. If the overhead ever matters, `./dev` could
   `docker compose exec` into a running container instead (about 0.1–0.2 s).
-- `node_modules` lives in the `web_node_modules` volume (shared by `web` and `test`), not in `web/`,
-  so it never mixes with a host install. Their entrypoint `docker/npm-deps.sh` runs `npm ci` when
-  `package-lock.json` changed since the last install, then runs the command.
+- `node_modules` is the ordinary `web/node_modules` in the bind-mounted checkout, installed by the
+  containers as your user, so the editor on the host sees the same packages (types, oxlint). The
+  entrypoint of `web` and `test`, `docker/npm-deps.sh`, runs `npm ci` when `package-lock.json`
+  changed since the last install, then runs the command; a `flock` on `web/` keeps two containers
+  starting at once from installing over each other. (Until 2026-10-16 it was a named volume, which
+  left an empty root-owned `web/node_modules` on the host; if an old checkout still has one,
+  `docker volume rm pharmacies_web_node_modules` and `rmdir web/node_modules`.)
 - Ports 5173 and 8080 listen on `127.0.0.1` only; the `lan` profile's 8443/8081 listen on all
   interfaces (Docker bypasses ufw).
 - The preview mounts `web/public/data/` instead of baking it in, so new data needs no rebuild.

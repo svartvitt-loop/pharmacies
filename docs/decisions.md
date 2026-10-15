@@ -112,4 +112,12 @@ were rewritten to match.
 Compose runs a dev server, a production-like preview (nginx under `/pharmacies/`) and, for phones,
 Caddy with a local CA (geolocation needs HTTPS). Dev data is **copied from the live site** by default,
 so local work doesn't load fsa-efimeries.gr; a real scrape is opt-in (`DATA_SOURCE=scrape`). The native
-`uv`/`npm` workflow still works. Browser tests in a container (Playwright) were deferred.
+`uv`/`npm` workflow still works. Browser tests in a container (Playwright) were deferred at first; they
+came with `./dev`, which now runs every dev task in a container.
+
+**D28 — `node_modules` in the checkout, installed by the containers.** It started in a named volume so
+it couldn't mix with a host install. Once host toolchains were dropped (`./dev`), the volume only
+cost: the host's editor had no packages, and Docker left an empty root-owned `web/node_modules`
+behind. The containers run as the host user, so they now install into `web/node_modules` directly;
+a `flock` keeps concurrent installs apart. *Cost:* the packages are Linux builds, so on a macOS or
+Windows host the tools in that folder wouldn't run natively (the editor's TypeScript still works).
