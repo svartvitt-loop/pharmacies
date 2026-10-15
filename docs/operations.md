@@ -37,7 +37,7 @@ One workflow, three jobs: **test** → **build** (scrape or restore, build, uplo
 | `workflow_dispatch` (manual "Run workflow") | without Playwright | yes | yes |
 | `push` to `main` | all | no — restores the latest cached `duties.json`; scrapes only if no cache exists | yes |
 | `pull_request` (Dependabot's) | all | no | no |
-| `push` touching only `**.md`, `.gitignore`, `LICENSE*`, `.claude/**`, `.vscode/**`, the dev environment (`compose.yaml`, `dev`, `docker/**`, `.dockerignore`, `.env.example`) | workflow doesn't run | | |
+| `push` touching only `**.md`, `.gitignore`, `LICENSE*`, `.claude/**`, `.vscode/**`, `.github/dependabot.yml`, the dev environment (`compose.yaml`, `dev`, `docker/**`, `.dockerignore`, `.env.example`) | workflow doesn't run | | |
 
 - **Data cache:** each scrape saves `duties.json` with key `duties-<DAYS>d-<run_id>`; pushes restore the
   newest key with prefix `duties-<DAYS>d-`. Cache keys can't be overwritten, hence one per run.
@@ -54,6 +54,11 @@ One workflow, three jobs: **test** → **build** (scrape or restore, build, uplo
   source that hangs through every retry), deploy 10 min.
 - `concurrency: pages` without cancelling: overlapping deploying runs queue instead of racing. Pull
   requests have their own group, where a newer push cancels the older run.
+- **Dependency updates:** Dependabot (`.github/dependabot.yml`) opens pull requests once a month:
+  GitHub Actions in one, npm and uv minor/patch updates grouped, npm majors one each; the test job
+  runs on them. By hand, on purpose: the Docker images (Node 24, Python 3.12), `@types/node` majors
+  (follow Node), and Playwright: `@playwright/test` (pinned exactly in `web/package.json`) and
+  `PLAYWRIGHT_VERSION` in `docker/e2e.Dockerfile` must change together.
 - GitHub pauses scheduled workflows after **60 days without repository activity**; re-enable in the
   Actions tab if the data stops updating.
 

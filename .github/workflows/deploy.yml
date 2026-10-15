@@ -12,6 +12,7 @@ on:
       - "LICENSE*"
       - ".claude/**"
       - ".vscode/**"
+      - ".github/dependabot.yml"
       - "compose.yaml"
       - "dev"
       - "docker/**"

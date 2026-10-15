@@ -150,3 +150,8 @@ and the type-check inside the build. A `test` job now runs every check (Playwrig
 changes: on schedule it would add time and a dependency on the map tiles without testing anything
 new) and `build` needs it. Pull requests run `test` alone. Pages permissions moved from the whole
 workflow to the deploy job, the only one that runs no third-party code, and every job got a timeout.
+
+**D34 — Dependabot, monthly and grouped.** Updates were by hand. Dependabot now opens monthly pull
+requests for GitHub Actions, npm and uv, grouped so there are few of them, and the workflow tests
+them. Left out on purpose: the Docker images (Node and Python majors are chosen, not drifted into)
+and Playwright, whose npm package and container image must move together.

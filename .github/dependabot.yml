@@ -1,0 +1,35 @@
+# Dependency updates as pull requests, once a month; the workflow runs the tests on them.
+# Not covered on purpose: the Docker images (Node 24 and Python 3.12 are pinned deliberately,
+# and the e2e image's tag comes from PLAYWRIGHT_VERSION).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /web
+    schedule:
+      interval: monthly
+    groups:
+      # Majors come one pull request each.
+      npm:
+        update-types: [minor, patch]
+    ignore:
+      # Must match PLAYWRIGHT_VERSION in docker/e2e.Dockerfile; bump both by hand.
+      - dependency-name: "@playwright/test"
+      # Follows Node's major version, 24 in CI and the images.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: uv
+    directory: /scraper
+    schedule:
+      interval: monthly
+    groups:
+      uv:
+        update-types: [minor, patch]
