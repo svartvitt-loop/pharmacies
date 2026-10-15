@@ -39,10 +39,12 @@ web/
   src/main.tsx, App.tsx        React entry; App owns the state and wires filters ↔ list ↔ map
   src/hooks.ts                 data loading, one-minute clock, media query
   src/components/              header, filters, area picker, view bar, list, cards, map, popup, footer
-  src/state.ts                 filter state, URL sync, time windows, filtering and sorting
+  src/state.ts                 UI state (filters, language, view) and its URL/localStorage sync
+  src/filter.ts                time windows, filtering, sorting, statuses (pure, no DOM)
   src/data.ts                  loads duties.json into Pharmacy objects with epoch-ms intervals
   src/time.ts                  Athens time-zone helpers (independent of the visitor's zone)
-  src/render.ts                status texts, links
+  src/geo.ts                   distances, map-area bounds
+  src/format.ts                status and hours texts, distances, links
   src/map.ts                   MapLibre map (imperative class), custom style, cross markers, popups
   src/i18n.ts, greek.ts        Greek/English strings; accent folding; transliteration
   src/style.css                layout (side-by-side ≥1024px, tabs below), light/dark tokens

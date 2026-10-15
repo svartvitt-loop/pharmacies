@@ -73,7 +73,7 @@ All filters combine (AND). Changing a filter updates the list and the map marker
 Order: on-duty pharmacies first, then closed ones (if shown). Within each group: by distance when
 "Near me" is on; otherwise currently-open first, then by the earliest relevant start, then by area.
 
-Statuses (cards, map markers and popups use the same rules, `render.ts`):
+Statuses (cards, map markers and popups use the same rule, `status()` in `filter.ts`):
 
 | Status | When | Colour |
 |---|---|---|

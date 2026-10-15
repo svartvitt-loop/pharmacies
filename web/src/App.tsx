@@ -7,17 +7,11 @@ import { Header } from "./components/Header";
 import { MapView, type MapHandle } from "./components/MapView";
 import { PharmacyList } from "./components/PharmacyList";
 import { ViewBar } from "./components/ViewBar";
+import { filterPharmacies, onDuty, windowCovered } from "./filter";
+import { inBounds, type Bounds } from "./geo";
 import { useDataset, useMediaQuery, useNow } from "./hooks";
 import { I18nContext, applyToDocument, i18nFor } from "./i18n";
-import type { Bounds } from "./map";
-import { filterPharmacies, onDuty, readState, windowCovered, writeState, type Result, type State, type View } from "./state";
-
-export type StateUpdate = Partial<State> | ((state: State) => Partial<State>);
-
-function inBounds({ pharmacy: p }: Result, b: Bounds): boolean {
-  if (p.lat === null || p.lng === null) return true;
-  return p.lat >= b.south && p.lat <= b.north && p.lng >= b.west && p.lng <= b.east;
-}
+import { readState, writeState, type StateUpdate, type View } from "./state";
 
 export function App() {
   const [state, setState] = useState(() => readState(Date.now()));
@@ -42,7 +36,7 @@ export function App() {
   const emptyMessage = data && windowCovered(data.dates, state, now) ? t("noResults") : t("outOfRange");
   // Result count and list; on wide screens only the pharmacies inside the visible map area.
   const bounds = sideBySide ? mapBounds : null;
-  const shown = results && bounds ? results.filter((r) => inBounds(r, bounds)) : results;
+  const shown = results && bounds ? results.filter((r) => inBounds(r.pharmacy, bounds)) : results;
   // The counts are about pharmacies on duty; closed ones (if shown) are counted separately.
   const total = results?.filter(onDuty).length ?? 0;
 

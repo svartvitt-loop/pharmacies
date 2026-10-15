@@ -1,5 +1,6 @@
+import { onDuty, type Result } from "../filter";
 import { useI18n } from "../i18n";
-import { onDuty, type Result, type View } from "../state";
+import type { View } from "../state";
 
 interface Props {
   shown: Result[] | null; // the listed results; null until the data has loaded

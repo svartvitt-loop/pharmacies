@@ -1,8 +1,9 @@
 import { useState, type KeyboardEvent } from "react";
 import type { Dataset } from "../data";
+import { filterPharmacies } from "../filter";
 import { fold } from "../greek";
 import { useI18n } from "../i18n";
-import { filterPharmacies, type State } from "../state";
+import type { State } from "../state";
 
 interface Props {
   state: State;

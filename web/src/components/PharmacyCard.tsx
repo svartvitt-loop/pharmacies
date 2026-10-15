@@ -1,6 +1,6 @@
+import { status, type Result } from "../filter";
+import { directionsUrl, distanceText, hoursText, moreInfoUrl, statusText } from "../format";
 import { useI18n } from "../i18n";
-import { directionsUrl, distanceText, hoursText, moreInfoUrl, status, statusText } from "../render";
-import type { Result } from "../state";
 
 interface Props {
   result: Result;

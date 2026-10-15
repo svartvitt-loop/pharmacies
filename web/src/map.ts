@@ -1,9 +1,9 @@
 import { LngLatBounds, Map as MapLibre, NavigationControl, Popup, setWorkerUrl, type GeoJSONSource } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
+import { onDuty, status, type Result } from "./filter";
+import type { Bounds, LatLng } from "./geo";
 import type { Lang } from "./i18n";
-import { status } from "./render";
-import { onDuty, type LatLng, type Result } from "./state";
 
 // The bundle can't find MapLibre's worker next to itself, so point it at the emitted copy.
 setWorkerUrl(workerUrl);
@@ -80,13 +80,6 @@ function roadWidth(extra = 0): unknown[] {
 }
 
 export type Fit = "results" | "athens" | false;
-
-export interface Bounds {
-  west: number;
-  south: number;
-  east: number;
-  north: number;
-}
 
 /** Street names in Greek, or OpenMapTiles' Latin transliteration in the English UI. */
 function streetName(lang: Lang): unknown {

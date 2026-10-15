@@ -1,6 +1,6 @@
+import { status, type Result } from "../filter";
+import { directionsUrl, hoursText, statusText } from "../format";
 import { useI18n } from "../i18n";
-import { directionsUrl, hoursText, status, statusText } from "../render";
-import type { Result } from "../state";
 
 export function PharmacyPopup({ result, now }: { result: Result; now: number }) {
   const i18n = useI18n();

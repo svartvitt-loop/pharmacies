@@ -1,5 +1,5 @@
+import { onDuty, type Result } from "../filter";
 import { useI18n } from "../i18n";
-import { onDuty, type Result } from "../state";
 import { PharmacyCard } from "./PharmacyCard";
 
 interface Props {

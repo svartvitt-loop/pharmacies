@@ -1,15 +1,7 @@
 import type { Interval, Pharmacy } from "./data";
+import { onDuty, status, type Result } from "./filter";
 import type { I18n } from "./i18n";
-import { onDuty, type Result } from "./state";
-import { HOUR, athensDate, formatClock, formatDay } from "./time";
-
-export type Status = "open" | "closing" | "later" | "closed";
-
-export function status(result: Result, now: number): Status {
-  if (!onDuty(result)) return "closed";
-  if (!result.current) return "later";
-  return result.current.end - now <= HOUR ? "closing" : "open";
-}
+import { athensDate, formatClock, formatDay } from "./time";
 
 export function statusText(result: Result, now: number, { t, locale }: I18n): string {
   if (!onDuty(result)) return t("closed");

@@ -1,8 +1,8 @@
 import { useState } from "react";
-import type { StateUpdate } from "../App";
 import type { Dataset } from "../data";
+import { RADII_KM, WHEN_OPTIONS } from "../filter";
 import { useI18n, type StringKey } from "../i18n";
-import { RADII_KM, WHEN_OPTIONS, type State } from "../state";
+import type { State, StateUpdate } from "../state";
 import { athensDate } from "../time";
 import { AreaPicker } from "./AreaPicker";
 

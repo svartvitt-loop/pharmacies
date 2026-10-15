@@ -1,6 +1,7 @@
 import { searchKey } from "./greek";
 
-interface RawDataset {
+/** duties.json as the scraper writes it (docs/architecture.md). */
+export interface RawDataset {
   generatedAt: string;
   source: string;
   dates: string[];
@@ -39,8 +40,11 @@ export interface Dataset {
 export async function loadDataset(): Promise<Dataset> {
   const response = await fetch("data/duties.json", { cache: "no-cache" });
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  const raw: RawDataset = await response.json();
+  return parseDataset(await response.json());
+}
 
+/** Pharmacies with their duty intervals as sorted epoch-ms ranges; those without any duty are left out. */
+export function parseDataset(raw: RawDataset): Dataset {
   const byId = new Map<string, Pharmacy>();
   for (const p of raw.pharmacies) byId.set(p.id, { ...p, intervals: [] });
   for (const duty of raw.duties) {

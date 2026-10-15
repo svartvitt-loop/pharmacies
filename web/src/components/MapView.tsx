@@ -1,8 +1,10 @@
 import { useEffect, useEffectEvent, useImperativeHandle, useRef, useState, type Ref } from "react";
 import { createPortal, flushSync } from "react-dom";
+import type { Result } from "../filter";
+import type { Bounds, LatLng } from "../geo";
 import { useI18n } from "../i18n";
-import { PharmacyMap, type Bounds, type Fit } from "../map";
-import type { LatLng, Result, View } from "../state";
+import { PharmacyMap, type Fit } from "../map";
+import type { View } from "../state";
 import { PharmacyPopup } from "./PharmacyPopup";
 
 export interface MapHandle {
