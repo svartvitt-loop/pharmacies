@@ -152,6 +152,7 @@ export class PharmacyMap {
   private lang = lang();
   private popup = new Popup({ maxWidth: "280px", offset: 12 });
   private near: LatLng | null = null;
+  private popupId: string | null = null;
 
   /** onMove receives the visible area whenever the map stops moving or is resized. */
   constructor(container: HTMLElement, onMove: (bounds: Bounds) => void) {
@@ -215,7 +216,11 @@ export class PharmacyMap {
     this.now = now;
     this.near = near;
     this.results = new Map(results.map((r) => [r.pharmacy.id, r]));
-    this.popup.remove();
+    // Keep an open popup (with fresh content) while its pharmacy is still listed.
+    if (this.popupId && this.popup.isOpen()) {
+      if (this.results.has(this.popupId)) this.openPopup(this.popupId);
+      else this.popup.remove();
+    }
 
     if (this.lang !== lang()) {
       this.lang = lang();
@@ -271,6 +276,7 @@ export class PharmacyMap {
     const result = this.results.get(id);
     const p = result?.pharmacy;
     if (!result || !p || p.lat === null || p.lng === null) return;
+    this.popupId = id;
     this.popup.setLngLat([p.lng, p.lat]).setDOMContent(popupContent(result, this.now)).addTo(this.map);
   }
 }

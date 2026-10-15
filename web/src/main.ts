@@ -32,12 +32,14 @@ const customFrom = $<HTMLInputElement>("custom-from");
 const customTo = $<HTMLInputElement>("custom-to");
 const radius = $<HTMLSelectElement>("radius");
 
-function commit(fit: boolean): void {
+/** Apply a state change. The map keeps its current position; only pins and list update. */
+function commit(): void {
   writeState(state);
   renderControls();
-  render(fit);
+  render();
 }
 
+/** fit is only used for the first render, before the user has a map position to keep. */
 function render(fit = false): void {
   if (!data) return;
   const now = Date.now();
@@ -81,7 +83,7 @@ function showOnMap(id: string): void {
 
 function setView(view: View): void {
   state.view = view;
-  commit(false);
+  commit();
   if (view === "map") {
     map.resize();
     if (fitPending) {
@@ -104,7 +106,7 @@ function renderControls(): void {
       button.setAttribute("aria-pressed", String(state.when === when));
       button.addEventListener("click", () => {
         state.when = when;
-        commit(true);
+        commit();
       });
       return button;
     }),
@@ -123,7 +125,7 @@ function renderControls(): void {
       const chip = el("button", { type: "button", className: "chip selected", title: t("removeArea") }, `${display(area)} ✕`);
       chip.addEventListener("click", () => {
         state.areas = state.areas.filter((a) => a !== area);
-        commit(true);
+        commit();
       });
       return chip;
     }),
@@ -184,7 +186,7 @@ function addArea(area: string): void {
   state.areas = [...state.areas, area];
   areaSearch.value = "";
   suggestions.hidden = true;
-  commit(true);
+  commit();
 }
 
 areaSearch.addEventListener("input", showSuggestions);
@@ -198,7 +200,7 @@ areaSearch.addEventListener("keydown", (event) => {
     suggestions.hidden = true;
   } else if (event.key === "Backspace" && !areaSearch.value && state.areas.length) {
     state.areas = state.areas.slice(0, -1);
-    commit(true);
+    commit();
   }
 });
 
@@ -208,7 +210,7 @@ for (const input of [customDate, customFrom, customTo]) {
     state.date = customDate.value;
     state.from = customFrom.value;
     state.to = customTo.value;
-    commit(true);
+    commit();
   });
 }
 
@@ -217,7 +219,7 @@ $("near-me").addEventListener("click", () => {
   if (state.near) {
     state.near = null;
     status.textContent = "";
-    commit(true);
+    commit();
     return;
   }
   status.textContent = t("locating");
@@ -226,7 +228,7 @@ $("near-me").addEventListener("click", () => {
       state.near = { lat: pos.coords.latitude, lng: pos.coords.longitude };
       if (!state.radiusKm) state.radiusKm = 2;
       status.textContent = "";
-      commit(true);
+      commit();
     },
     () => (status.textContent = t("locationError")),
     { enableHighAccuracy: true, timeout: 15_000, maximumAge: 60_000 },
@@ -235,7 +237,7 @@ $("near-me").addEventListener("click", () => {
 
 radius.addEventListener("change", () => {
   state.radiusKm = Number(radius.value);
-  commit(true);
+  commit();
 });
 
 for (const tab of [$("tab-list"), $("tab-map")]) {
@@ -245,7 +247,7 @@ for (const tab of [$("tab-list"), $("tab-map")]) {
 $("lang-toggle").addEventListener("click", () => {
   state.lang = state.lang === "el" ? "en" : "el";
   setLang(state.lang);
-  commit(false);
+  commit();
 });
 
 // Keep "open now" statuses fresh.
