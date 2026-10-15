@@ -22,6 +22,7 @@
 | Push builds would have kept the old 14-day data | Push builds restore the cached file | Day count added to the cache key |
 | Another session edited the same files while a change was being committed | Shared working tree | Staged only the relevant hunk (`git apply --cached`) so the other work stayed uncommitted |
 | Overpass (OSM) research query failed | `502 Bad Gateway` from overpass-api.de, a mirror returned HTML | Retried; the main endpoint answered on the second try |
+| Map tiles didn't render in the Docker preview ("Worker failed to load") | nginx has no MIME type for `.mjs` and served MapLibre's worker as `application/octet-stream`; Pages sends `text/javascript` | `types { text/javascript mjs; }` in `docker/nginx.conf` |
 
 ## Known issues and limitations (open)
 

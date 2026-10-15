@@ -43,6 +43,64 @@ One workflow, two jobs: **build** (test, scrape or restore, build, upload) → *
 
 ## Local development
 
+### Docker (recommended)
+
+`compose.yaml` runs everything in containers; only Docker is needed on the host.
+
+| Service | What it does | URL |
+|---|---|---|
+| `data` | One-shot: puts `web/public/data/duties.json` in place, then exits | — |
+| `web` | Vite dev server with hot reload; source bind-mounted | http://localhost:5173 |
+| `preview` (profile `preview`) | Production build in nginx under `/pharmacies/`, like GitHub Pages | http://localhost:8080/pharmacies/ |
+| `caddy` (profile `lan`) | HTTPS for phones on the LAN, in front of `web` and `preview` | https://&lt;LAN_IP&gt;:8443/ |
+
+```bash
+cp .env.example .env                         # once; set HOST_UID/HOST_GID if not 1000, LAN_IP for phones
+docker compose up                            # data + dev server
+docker compose up --build preview            # + production build (rebuild after code changes)
+docker compose --profile preview --profile lan up --build   # everything, incl. HTTPS for phones
+docker compose run --rm data pytest -q       # scraper tests
+docker compose down                          # stop (keep volumes: the caddy CA lives in one)
+```
+
+**Data** (`docker/data.py`, chosen with `DATA_SOURCE`):
+
+- `download` (default): copies the live site's `data/duties.json`, unless the local file is less than
+  an hour old (`DATA_MAX_AGE_HOURS`). No requests to fsa-efimeries.gr. If the download fails, an
+  existing file is kept.
+- `scrape`: runs the real scraper (~1 min). `DATA_SOURCE=scrape docker compose up`, or just the data
+  step: `docker compose run --rm -e DATA_SOURCE=scrape data`. `DAYS` sets the range (default 55).
+- `keep`: uses the local file as it is (e.g. one you scraped or edited by hand).
+
+**Details:**
+
+- Containers run as `HOST_UID:HOST_GID` (default 1000), so `duties.json` is owned by you.
+- `node_modules` lives in the `web_node_modules` volume, not in `web/`, so it never mixes with a
+  host install. `docker/web-start.sh` runs `npm ci` when `package-lock.json` changed since the last
+  install, then starts Vite.
+- Ports 5173 and 8080 listen on `127.0.0.1` only; the `lan` profile's 8443/8081 listen on all
+  interfaces (Docker bypasses ufw).
+- The preview mounts `web/public/data/` instead of baking it in, so new data needs no rebuild.
+  nginx mimics Pages: `/pharmacies` → `/pharmacies/`, `Cache-Control: max-age=600`, `.mjs` as
+  `text/javascript`.
+- Image versions follow CI: Node 24, Python 3.12, uv.
+
+**Testing on a phone (`lan` profile).** Location ("Near me") needs a secure context, which a phone
+only gets over HTTPS. Caddy issues certificates from its own local CA:
+
+1. Set `LAN_IP` in `.env` (`ip route get 1.1.1.1 | grep -oP 'src \K\S+'`) and start with
+   `--profile lan`.
+2. On the phone (same Wi-Fi), open `http://<LAN_IP>:8081/ca.crt` and install the certificate:
+   - Android: Settings → Security → Encryption & credentials → Install a certificate → CA certificate.
+   - iOS: install the downloaded profile, then enable it under Settings → General → About →
+     Certificate Trust Settings.
+3. Open `https://<LAN_IP>:8443/` (dev server, hot reload works) or `…:8443/pharmacies/` (preview).
+
+The CA is stored in the `caddy_data` volume; `docker compose down -v` deletes it and phones then need
+the new one. If the machine's IP changes, update `LAN_IP` and restart caddy.
+
+### Without Docker
+
 ```bash
 cd scraper
 uv run pytest -q

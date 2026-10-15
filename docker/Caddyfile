@@ -1,0 +1,34 @@
+# HTTPS front for testing from other devices on the LAN; geolocation needs a secure context.
+# Certificates come from Caddy's local CA: install its root once per device from http://<LAN_IP>:8081/ca.crt
+{
+	auto_https disable_redirects
+	skip_install_trust
+	# Browsers send no SNI when connecting to an IP address; use the certificate for LAN_IP.
+	default_sni {$LAN_IP}
+}
+
+https://localhost, https://{$LAN_IP} {
+	tls internal
+
+	# The production build (preview profile) at the same path as on GitHub Pages.
+	handle /pharmacies* {
+		reverse_proxy preview:80
+	}
+	# Everything else is the dev server, including its hot-reload WebSocket.
+	handle {
+		reverse_proxy web:5173
+	}
+}
+
+:80 {
+	# Serve only the root certificate; its private key is in the same directory.
+	handle /ca.crt {
+		root * /data/caddy/pki/authorities/local
+		rewrite * /root.crt
+		header Content-Type application/x-x509-ca-cert
+		file_server
+	}
+	handle {
+		respond "Install the CA from /ca.crt, then open https://{$LAN_IP}:8443/" 404
+	}
+}

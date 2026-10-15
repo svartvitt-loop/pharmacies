@@ -104,3 +104,9 @@ editor/Claude settings).
 
 **D26 — Conventional Commits, one commit per change** (user rule, in `CLAUDE.md`). Earlier messages
 were rewritten to match.
+
+**D27 — Local dev environment in Docker Compose.** Changes used to be tested on the live site.
+Compose runs a dev server, a production-like preview (nginx under `/pharmacies/`) and, for phones,
+Caddy with a local CA (geolocation needs HTTPS). Dev data is **copied from the live site** by default,
+so local work doesn't load fsa-efimeries.gr; a real scrape is opt-in (`DATA_SOURCE=scrape`). The native
+`uv`/`npm` workflow still works. Browser tests in a container (Playwright) were deferred.

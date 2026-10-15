@@ -1,0 +1,75 @@
+# Local development environment. Usage: docs/operations.md, "Local development".
+name: pharmacies
+
+# Containers run as the host user, so files they write into the checkout aren't owned by root.
+x-user: &user "${HOST_UID:-1000}:${HOST_GID:-1000}"
+
+services:
+  # One-shot: puts web/public/data/duties.json in place, then exits.
+  data:
+    build:
+      context: .
+      dockerfile: docker/scraper.Dockerfile
+    user: *user
+    working_dir: /app/scraper
+    volumes:
+      - ./scraper:/app/scraper
+      - ./web:/app/web
+      - ./docker:/app/docker:ro
+    environment:
+      DATA_SOURCE: ${DATA_SOURCE:-download} # download | scrape | keep
+      DATA_MAX_AGE_HOURS: ${DATA_MAX_AGE_HOURS:-1}
+      DAYS: ${DAYS:-55}
+    command: python /app/docker/data.py
+
+  # Vite dev server with hot reload: http://localhost:5173
+  web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+    user: *user
+    depends_on:
+      data:
+        condition: service_completed_successfully
+    volumes:
+      - ./web:/app/web
+      - ./docker:/app/docker:ro
+      - web_node_modules:/app/web/node_modules
+    command: /app/docker/web-start.sh
+    ports:
+      - "127.0.0.1:5173:5173"
+
+  # Production build served like GitHub Pages: http://localhost:8080/pharmacies/
+  # Code changes need a rebuild: docker compose up --build preview
+  preview:
+    profiles: [preview]
+    build:
+      context: .
+      dockerfile: docker/preview.Dockerfile
+    depends_on:
+      data:
+        condition: service_completed_successfully
+    volumes:
+      - ./web/public/data:/usr/share/nginx/html/pharmacies/data:ro
+    ports:
+      - "127.0.0.1:8080:80"
+
+  # HTTPS for other devices on the LAN (phones), where geolocation needs a secure context:
+  # https://<LAN_IP>:8443/ (dev server) and https://<LAN_IP>:8443/pharmacies/ (preview).
+  caddy:
+    profiles: [lan]
+    image: caddy:2-alpine
+    depends_on:
+      - web
+    environment:
+      LAN_IP: ${LAN_IP:-127.0.0.1}
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data # holds the local CA; keep it, or devices must trust a new one
+    ports:
+      - "8443:443"
+      - "8081:80"
+
+volumes:
+  web_node_modules:
+  caddy_data:
