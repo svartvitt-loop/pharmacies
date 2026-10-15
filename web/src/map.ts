@@ -287,6 +287,11 @@ export class PharmacyMap {
   }
 
   focus(id: string): void {
+    // Before the style has loaded the map doesn't know the results yet (see update).
+    if (!this.ready) {
+      this.map.once("load", () => this.focus(id));
+      return;
+    }
     const p = this.results.get(id)?.pharmacy;
     if (!p || p.lat === null || p.lng === null) return;
     // Fly instead of jumping so the user can follow where the map goes; open the popup on arrival
