@@ -81,7 +81,9 @@ The radius is drawn on the map as a light purple circle around the location dot.
   up to 6 suggestions such as "Σκουφά 10, Κολωνάκι". Results are limited to the box around all
   pharmacies plus 5 km and biased towards central Athens; English UI asks for English names where
   OSM has them. If Photon fails, the box says address search is unavailable.
-- The chosen address becomes a removable chip; results are sorted by distance from it and the radius
+- **One address at a time:** the box shows the chosen address. Typing in it (focusing selects the text)
+  searches for another, which replaces it when picked; leaving the box without picking restores the
+  chosen address, and emptying the box removes it. Results are sorted by distance from it and the radius
   slider applies as for Near me. The address (label and coordinates) **is** in the URL, so the link can
   be shared. What the user types is sent to Photon ([decisions.md](decisions.md) D36); the footer
   credits it.

@@ -250,6 +250,10 @@ select {
   max-width: 100%;
 }
 
+.address-search {
+  width: 300px; /* room for the chosen address, e.g. "Σκουφά 10, Κολωνάκι" */
+}
+
 .suggestions {
   position: absolute;
   top: 100%;

@@ -94,37 +94,53 @@ test.describe("near me, far from every pharmacy", () => {
   });
 });
 
-test("filters by distance from an address", async ({ page }) => {
+test("filters by distance from one address at a time", async ({ page }) => {
   let photonQuery: URLSearchParams | null = null;
   await page.route("https://photon.komoot.io/**", (route) => {
     photonQuery = new URL(route.request().url()).searchParams;
-    return route.fulfill({
-      json: {
-        type: "FeatureCollection",
-        features: [
-          {
-            type: "Feature",
-            geometry: { type: "Point", coordinates: [23.7423, 37.9779] },
-            properties: { street: "Skoufa", housenumber: "10", district: "Kolonaki", city: "Athens" },
-          },
-        ],
-      },
-    });
+    const omonia = photonQuery.get("q")!.includes("omon");
+    const feature = omonia
+      ? { geometry: { type: "Point", coordinates: [23.7281, 37.9841] }, properties: { name: "Omonia Square", city: "Athens" } }
+      : {
+          geometry: { type: "Point", coordinates: [23.7423, 37.9779] },
+          properties: { street: "Skoufa", housenumber: "10", district: "Kolonaki", city: "Athens" },
+        };
+    return route.fulfill({ json: { type: "FeatureCollection", features: [{ type: "Feature", ...feature }] } });
   });
   await page.goto("?lang=en");
   await page.getByRole("button", { name: "Address" }).click();
-  await page.getByPlaceholder(/street/i).fill("skoufa 10");
+  const box = page.getByPlaceholder(/street/i);
+  await box.fill("skoufa 10");
   await page.getByRole("option", { name: "Skoufa 10, Kolonaki" }).click();
   expect(photonQuery!.get("q")).toBe("skoufa 10");
   expect(photonQuery!.get("bbox")).toMatch(/^[\d.]+,[\d.]+,[\d.]+,[\d.]+$/);
+  await expect(box).toHaveValue("Skoufa 10, Kolonaki"); // the box shows the chosen address
   await expect(page.locator("#result-count")).toHaveText("2 pharmacies");
   await page.getByRole("slider", { name: "Radius" }).fill("0");
-  await expect(page.locator("#result-count")).toHaveText("1 pharmacy");
+  await expect(page.locator(".card h2")).toHaveText(["Farmakeio Kolonakiou"], { ignoreCase: true });
   await expect(page).toHaveURL(/place=address&addr=Skoufa\+10%2C\+Kolonaki&at=37\.97790%2C23\.74230&radius=1/);
+
   // The address survives a reload.
   await page.reload();
-  await expect(page.locator("#result-count")).toHaveText("1 pharmacy");
-  await expect(page.getByRole("button", { name: "Skoufa 10, Kolonaki ✕" })).toBeVisible();
+  await expect(page.locator(".card h2")).toHaveText(["Farmakeio Kolonakiou"], { ignoreCase: true });
+  await expect(box).toHaveValue("Skoufa 10, Kolonaki");
+
+  // Typing in the box replaces the address with the next one picked.
+  await box.click();
+  await page.keyboard.type("omonia");
+  await expect(box).toHaveValue("omonia");
+  await page.getByRole("option", { name: "Omonia Square, Athens" }).click();
+  await expect(box).toHaveValue("Omonia Square, Athens");
+  await expect(page.locator(".card h2")).toHaveText(["Farmakeio Omonoias"], { ignoreCase: true });
+  await expect(page).toHaveURL(/addr=Omonia\+Square%2C\+Athens/);
+
+  // Leaving the box without picking keeps the address; emptying it removes the address.
+  await box.fill("somewhere else");
+  await box.blur();
+  await expect(box).toHaveValue("Omonia Square, Athens");
+  await box.fill("");
+  await expect(page.locator("#result-count")).toHaveText("2 pharmacies");
+  await expect(page).not.toHaveURL(/addr=/);
 });
 
 test("shows pharmacies not on duty on request", async ({ page }) => {
