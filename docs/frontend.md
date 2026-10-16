@@ -48,64 +48,9 @@ immediately. Only the Where (place) filter also moves the map (see "List and map
 
 ### Where — place filters
 
-A row of chips: **Everywhere** (default) · **📍 Near me** · **Address** · **Areas**. **At most one place
-filter applies at a time**; below the chips only the chosen one's inputs are shown. Each keeps its
-input while another is chosen (switching from Address to Near me and back restores the address), but
-only the chosen one filters, sorts and goes into the URL (`filter.ts`: `origin()`, `filterPharmacies()`).
-
-Choosing or changing a place filter **moves the map** to it (`placeFrame()`):
-
-| Place filter | Map shows |
-|---|---|
-| Near me / Address | the smallest box around the radius circle |
-| Areas | the box around every pharmacy of the chosen areas (on duty or not, so it doesn't change with the time window) |
-| Everywhere | stays where it is |
-
-The radius is drawn on the map as a light purple circle around the location dot.
-
-#### Near me
-
-- Asks for the browser location (needs HTTPS — works on the live site, not on plain-HTTP previews).
-  Results are then sorted by distance and show it on each card.
-- **Radius slider** with the steps 1 · 2 · 5 · 10 km (default 2 km), shared with Address. There is no
-  unlimited step: no distance limit is **Everywhere**.
-- The location is **never written to the URL**, only `place=me`. Opening such a link locates the user
-  automatically only if location access is already allowed (Permissions API), so a shared link never
-  shows a permission prompt unasked; otherwise a **Find my location** button is shown. It also serves
-  as the retry after an error.
-
-#### Address
-
-- A search box with **autocomplete** from [Photon](https://photon.komoot.io/) (komoot's OpenStreetMap
-  geocoder; `geocode.ts`): from 3 characters, 300 ms after the last keystroke, stale requests cancelled,
-  up to 6 suggestions such as "Σκουφά 10, Κολωνάκι". Results are limited to the box around all
-  pharmacies plus 5 km and biased towards central Athens; English UI asks for English names where
-  OSM has them. If Photon fails, the box says address search is unavailable.
-- **One address at a time:** the box shows the chosen address. Typing in it (focusing selects the text)
-  searches for another, which replaces it when picked; leaving the box without picking restores the
-  chosen address, and emptying the box removes it. Results are sorted by distance from it and the radius
-  slider applies as for Near me. The address (label and coordinates) **is** in the URL, so the link can
-  be shared. What the user types is sent to Photon ([decisions.md](decisions.md) D36); the footer
-  credits it.
-- **A street without a number** (Photon's `type: "street"`, an OSM way) is also **drawn on the map**:
-  the whole street in pale purple (the circle's colour at 50 %), under the street names, besides the
-  circle around the chosen point. Its shape comes from Nominatim (D37): one search by the street's name
-  in a 5 km box around the point, every way separately (`dedupe=0`, up to 40). Of those,
-  `connectedStreet()` keeps the picked way and the ways joined to it through shared points, so a
-  namesake elsewhere in the box is left out. The URL keeps the way (`way=`), so a shared link draws the
-  street too. If the request fails nothing is drawn; the radius and the results don't depend on it.
-
-#### Areas
-
-- A search box over the ~160+ FSA area names (e.g. ΚΥΨΕΛΗ, ΠΑΓΚΡΑΤΙ, ΚΕΝΤΡΟ ΑΘΗΝΑΣ); selected areas
-  become removable chips. Several areas can be selected.
-- **Only areas with a pharmacy on duty in the selected time window are suggested**, each with that count
-  (the count ignores the place filter and "show closed"). Areas already chosen stay as chips even if the
-  window changes and they have nobody on duty.
-- Matching ignores accents and case and accepts **Latin letters**: `kyps` finds ΚΥΨΕΛΗ (each area has
-  a search key of its folded Greek plus its transliteration).
-- With an empty query the suggestions are ordered by count. Enter picks the first suggestion,
-  Backspace in the empty box removes the last chip.
+Everywhere · Near me · Address · Areas, at most one at a time; Near me and Address with a radius
+slider, and the only filter that moves the map. Everything about it is in
+[filter-where.md](filter-where.md).
 
 ### Show closed
 
@@ -161,9 +106,7 @@ looked up by address. iOS always opens Apple Maps, even if another navigation ap
 - **The map keeps its position when the time window, language or "show closed" change.** It is only
   moved
   - on first load (a jump): Athens centre at zoom 12, or the place filter's frame if the URL has one;
-  - when the **place filter changes** (a flight; see "Where" above). `placeKey()` in `filter.ts`
-    changes exactly then. A map hidden behind the List tab on a phone moves once it is shown.
-    Choosing Everywhere leaves the map where it is;
+  - when the **place filter changes** (a flight; see [filter-where.md](filter-where.md#map-camera));
   - by **Show all**;
   - by a card's **On map** (zooms to ≥ 15 and opens the popup; on phones it switches to the Map tab).
 - An open popup stays open across refreshes as long as its pharmacy is still in the results.
@@ -185,14 +128,5 @@ looked up by address. iOS always opens Apple Maps, even if another navigation ap
 Shareable: `?lang=en&view=map&when=custom&date=2026-10-18&from=22:00&to=02:00&place=areas&areas=ΚΥΨΕΛΗ,ΠΑΓΚΡΑΤΙ&closed=1`.
 Defaults are omitted. The URL is updated with `history.replaceState` (no history entries per click).
 
-Place filters in the URL (only the one in use):
-
-| Filter | Parameters |
-|---|---|
-| Near me | `place=me&radius=5` |
-| Address | `place=address&addr=Σκουφά 10, Κολωνάκι&at=37.97790,23.74230&radius=1` |
-| Areas | `place=areas&areas=ΚΥΨΕΛΗ,ΠΑΓΚΡΑΤΙ` |
-
-`radius` is `1`, `5` or `10`, and is left out at the default 2 km (anything else reads as 2). Links from before the place
-filters (`areas=` without `place`) still open as Areas. Not stored: the user's location, and the map
-position.
+The place filter's parameters (`place`, `areas`, `addr`, `at`, `way`, `radius`) are listed in
+[filter-where.md](filter-where.md#behaviour). Not stored: the user's location, and the map position.

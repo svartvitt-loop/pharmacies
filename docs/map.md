@@ -77,7 +77,7 @@ against the same OpenFreeMap data. OpenFreeMap's own `liberty`, `bright` and `po
 
 ## Camera rules
 
-The camera only moves on first load, when the **place filter** (Near me, Address, Areas) changes,
+The camera only moves on first load, when the **place filter** ([filter-where.md](filter-where.md)) changes,
 on **Show all**, and on **On map**; the other filters never move it. A place filter is shown by fitting
 a box (`fitBounds`, padding 40 px, at most zoom 15): around its radius circle, or around the chosen areas'
 pharmacies. The `radius` ring is computed in `geo.ts` (`circlePolygon()`, 64 points). The map reports

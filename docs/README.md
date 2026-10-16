@@ -22,6 +22,7 @@ The original brief: a simple website showing the pharmacies that are open in Ath
 | [architecture.md](architecture.md) | Components, data flow, repository layout, the data file format |
 | [data-source.md](data-source.md) | The FSA duty-schedule endpoint, how it is parsed, coverage numbers, alternatives that were evaluated |
 | [frontend.md](frontend.md) | UI behaviour: time windows, filters, list/map interaction, statuses, languages, URL state |
+| [filter-where.md](filter-where.md) | The Where (place) filter: requirements and current behaviour, the source of truth |
 | [map.md](map.md) | Map stack (MapLibre + OpenFreeMap), the custom style, colour history, markers |
 | [operations.md](operations.md) | Hosting, GitHub repo and access, the CI workflow, local development, how changes are tested |
 | [decisions.md](decisions.md) | Decision log: what was decided, why, and the trade-offs |
