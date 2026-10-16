@@ -34,8 +34,7 @@ export function readState(now: number): State {
   // Links from before the place filters have only areas=.
   if (!PLACES.includes(place!)) place = areas.length ? "areas" : null;
   if (place === "address" && !address) place = null;
-  const radiusParam = q.get("radius");
-  const radius = radiusParam === "any" ? 0 : Number(radiusParam ?? DEFAULT_RADIUS_KM);
+  const radius = Number(q.get("radius") ?? DEFAULT_RADIUS_KM);
   return {
     lang: langParam === "en" ? "en" : "el",
     view: q.get("view") === "map" ? "map" : "list",
@@ -71,7 +70,7 @@ export function writeState(state: State): void {
     if (state.address.way) q.set("way", String(state.address.way));
   }
   if ((state.place === "me" || state.place === "address") && state.radiusKm !== DEFAULT_RADIUS_KM) {
-    q.set("radius", state.radiusKm ? String(state.radiusKm) : "any");
+    q.set("radius", String(state.radiusKm));
   }
   if (state.showClosed) q.set("closed", "1");
   history.replaceState(null, "", `${location.pathname}?${q}`);

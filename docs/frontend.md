@@ -57,8 +57,7 @@ Choosing or changing a place filter **moves the map** to it (`placeFrame()`):
 
 | Place filter | Map shows |
 |---|---|
-| Near me / Address, radius 1–10 km | the smallest box around the radius circle |
-| Near me / Address, radius ∞ | the location plus every on-duty result (like **Show all**) |
+| Near me / Address | the smallest box around the radius circle |
 | Areas | the box around every pharmacy of the chosen areas (on duty or not, so it doesn't change with the time window) |
 | Everywhere | stays where it is |
 
@@ -68,7 +67,8 @@ The radius is drawn on the map as a light purple circle around the location dot.
 
 - Asks for the browser location (needs HTTPS — works on the live site, not on plain-HTTP previews).
   Results are then sorted by distance and show it on each card.
-- **Radius slider** with the steps 1 · 2 · 5 · 10 km · ∞ (default 2 km), shared with Address.
+- **Radius slider** with the steps 1 · 2 · 5 · 10 km (default 2 km), shared with Address. There is no
+  unlimited step: no distance limit is **Everywhere**.
 - The location is **never written to the URL**, only `place=me`. Opening such a link locates the user
   automatically only if location access is already allowed (Permissions API), so a shared link never
   shows a permission prompt unasked; otherwise a **Find my location** button is shown. It also serves
@@ -193,6 +193,6 @@ Place filters in the URL (only the one in use):
 | Address | `place=address&addr=Σκουφά 10, Κολωνάκι&at=37.97790,23.74230&radius=1` |
 | Areas | `place=areas&areas=ΚΥΨΕΛΗ,ΠΑΓΚΡΑΤΙ` |
 
-`radius` is `1`, `5`, `10` or `any`, and is left out at the default 2 km. Links from before the place
+`radius` is `1`, `5` or `10`, and is left out at the default 2 km (anything else reads as 2). Links from before the place
 filters (`areas=` without `place`) still open as Areas. Not stored: the user's location, and the map
 position.

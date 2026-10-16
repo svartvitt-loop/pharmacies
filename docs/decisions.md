@@ -186,3 +186,7 @@ connected to the picked one, which drops namesakes in neighbouring districts. On
 within Nominatim's usage policy (no autocomplete there; Photon still does that). *Cost:* another
 OpenStreetMap service receives the chosen street name and point; a street longer than the 5 km box or
 than 40 ways is drawn only in part; on failure nothing is drawn.
+
+**D38 — No unlimited radius.** User. The radius slider had a last step "∞" (sort by distance, no limit,
+map fitted to all results). It duplicated **Everywhere** in the same group, so the slider is now
+1/2/5/10 km only; old `radius=any` links read as the default 2 km.

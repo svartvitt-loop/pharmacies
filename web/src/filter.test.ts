@@ -15,7 +15,7 @@ const filter = (change: Partial<Filter> = {}): Filter => ({
   areas: [],
   address: null,
   near: null,
-  radiusKm: 0,
+  radiusKm: 2,
   showClosed: false,
   ...change,
 });
@@ -116,10 +116,10 @@ describe("filterPharmacies", () => {
     expect(ids([later, sinceTen, day], filter({ when: "today" }))).toEqual(["day", "sinceTen", "later"]);
   });
 
-  it("near me: sorts by distance and applies the radius; 0 is any distance", () => {
+  it("near me: sorts by distance and applies the radius", () => {
     const near = pharmacy("near", [DAY], { lat: 37.99 }); // about 1.1 km north
     const far = pharmacy("far", [DAY], { lat: 38.03 }); // about 5.6 km north
-    const results = filterPharmacies([far, near, day], filter({ place: "me", near: HERE }), NOON);
+    const results = filterPharmacies([far, near, day], filter({ place: "me", near: HERE, radiusKm: 10 }), NOON);
     expect(results.map((r) => r.pharmacy.id)).toEqual(["day", "near", "far"]);
     expect(results[1].distanceKm).toBeCloseTo(1.11, 1);
     expect(ids([far, near, day], filter({ place: "me", near: HERE, radiusKm: 2 }))).toEqual(["day", "near"]);
@@ -156,9 +156,9 @@ describe("place filters", () => {
     expect(origin(filter({ place: "me" }))).toBeNull(); // not located yet
   });
 
-  it("frames the radius, or every result with any distance", () => {
+  it("frames the radius around the origin, once there is one", () => {
     expect(placeFrame(filter({ place: "me", near: HERE, radiusKm: 2 }), [])).toEqual(circleBounds(HERE, 2));
-    expect(placeFrame(filter({ place: "address", address: ADDRESS, radiusKm: 0 }), [])).toBe("results");
+    expect(placeFrame(filter({ place: "address", address: ADDRESS, radiusKm: 10 }), [])).toEqual(circleBounds(ADDRESS, 10));
     expect(placeFrame(filter({ place: "me", radiusKm: 2 }), [])).toBeNull();
     expect(placeFrame(filter(), [])).toBeNull();
   });

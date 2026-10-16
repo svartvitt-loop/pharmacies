@@ -67,9 +67,10 @@ test.describe("near me", () => {
     await slider.fill("0"); // the first step: 1 km
     await expect(page.locator("#result-count")).toHaveText("1 pharmacy");
     await expect(page).toHaveURL(/place=me&radius=1/);
-    await slider.fill("4"); // the last step: any distance
-    await expect(slider).toHaveAttribute("aria-valuetext", "Any distance");
-    await expect(page).toHaveURL(/place=me&radius=any/);
+    await slider.fill("3"); // the last step: 10 km; there is no unlimited radius (that is Everywhere)
+    await expect(slider).toHaveAttribute("aria-valuetext", "10 km");
+    await expect(page.locator(".radius-ticks")).toHaveText("1 km2 km5 km10 km");
+    await expect(page).toHaveURL(/place=me&radius=10/);
   });
 
   test("locates on load when the link asks for it and access is already allowed", async ({ page }) => {

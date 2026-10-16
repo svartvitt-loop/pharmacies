@@ -3,7 +3,7 @@ import { RADII_KM } from "../filter";
 import { useI18n } from "../i18n";
 
 interface Props {
-  radiusKm: number; // 0 = any distance
+  radiusKm: number;
   onChange: (radiusKm: number) => void;
 }
 
@@ -23,13 +23,13 @@ export function RadiusSlider({ radiusKm, onChange }: Props) {
           max={RADII_KM.length - 1}
           step={1}
           value={index}
-          aria-valuetext={radiusKm ? `${radiusKm} km` : t("anyDistance")}
+          aria-valuetext={`${radiusKm} km`}
           onChange={(e) => onChange(RADII_KM[Number(e.target.value)])}
         />
         <div className="radius-ticks" aria-hidden="true">
           {RADII_KM.map((km) => (
             <span key={km} className={km === radiusKm ? "current" : undefined}>
-              {km ? `${km} km` : "∞"}
+              {km} km
             </span>
           ))}
         </div>

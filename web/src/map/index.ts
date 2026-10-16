@@ -21,13 +21,13 @@ const STREET_COLOR = "#be9df6";
 /** What the place filter draws: the origin dot (the user or the address), its radius, a chosen street. */
 export interface PlaceMarks {
   origin: LatLng | null;
-  radiusKm: number; // 0: no circle
+  radiusKm: number; // drawn around the origin
   street: Line[] | null;
 }
 
-/** A camera move: to a box, to every result, or to central Athens; flying or jumping. */
+/** A camera move: to a box or to central Athens; flying or jumping. */
 export interface Camera {
-  fit: Bounds | "results" | "athens";
+  fit: Bounds | "athens";
   animate: boolean;
 }
 
@@ -180,7 +180,7 @@ export class PharmacyMap {
     (this.map.getSource("radius") as GeoJSONSource).setData({
       type: "FeatureCollection",
       features:
-        origin && radiusKm
+        origin
           ? [{ type: "Feature", geometry: { type: "Polygon", coordinates: [circlePolygon(origin, radiusKm)] }, properties: {} }]
           : [],
     });
@@ -191,8 +191,6 @@ export class PharmacyMap {
 
     if (camera?.fit === "athens") {
       this.map.jumpTo({ center: ATHENS, zoom: 12 });
-    } else if (camera?.fit === "results") {
-      this.fitResults(camera.animate);
     } else if (camera) {
       const { west, south, east, north } = camera.fit;
       this.fitBox(new LngLatBounds([west, south], [east, north]), camera.animate);

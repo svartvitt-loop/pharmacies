@@ -7,7 +7,7 @@ export type When = (typeof WHEN_OPTIONS)[number];
 /** The place filters; at most one applies at a time (none: all of Attica). */
 export const PLACES = ["me", "address", "areas"] as const;
 export type Place = (typeof PLACES)[number];
-export const RADII_KM = [1, 2, 5, 10, 0] as const; // in slider order; 0 = any distance
+export const RADII_KM = [1, 2, 5, 10] as const; // the slider steps; no limit is the Everywhere place
 export const DEFAULT_RADIUS_KM = 2;
 
 /** A geocoded address the user picked. */
@@ -40,9 +40,9 @@ export function origin(filter: Filter): LatLng | null {
 
 /**
  * Where the map should look after the place filter changes: a box (around the radius, or around
- * the chosen areas' pharmacies), "results" (every result and the origin), or null to stay put.
+ * the chosen areas' pharmacies), or null to stay put.
  */
-export type Frame = Bounds | "results" | null;
+export type Frame = Bounds | null;
 
 export function placeFrame(filter: Filter, pharmacies: Pharmacy[]): Frame {
   if (filter.place === "areas") {
@@ -51,8 +51,7 @@ export function placeFrame(filter: Filter, pharmacies: Pharmacy[]): Frame {
     return boundsOf(pharmacies.filter((p) => areas.has(p.area)));
   }
   const from = origin(filter);
-  if (!from) return null;
-  return filter.radiusKm ? circleBounds(from, filter.radiusKm) : "results";
+  return from && circleBounds(from, filter.radiusKm);
 }
 
 /** Changes whenever the place filter does, and only then; the map moves when it changes. */
@@ -126,7 +125,7 @@ export function filterPharmacies(pharmacies: Pharmacy[], filter: Filter, now: nu
     let distance: number | null = null;
     if (from && pharmacy.lat !== null && pharmacy.lng !== null) {
       distance = distanceKm(from, { lat: pharmacy.lat, lng: pharmacy.lng });
-      if (filter.radiusKm && distance > filter.radiusKm) continue;
+      if (distance > filter.radiusKm) continue;
     }
     const current = pharmacy.intervals.find((i) => i.start <= now && now < i.end) ?? null;
     const next = pharmacy.intervals.find((i) => i.end > now) ?? null;

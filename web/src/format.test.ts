@@ -31,7 +31,7 @@ function result(intervals: [string, string][], when: When = "now") {
     areas: [],
     address: null,
     near: null,
-    radiusKm: 0,
+    radiusKm: 2,
     showClosed: true,
   };
   return filterPharmacies([pharmacy(intervals)], filter, NOON)[0];
