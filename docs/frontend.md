@@ -48,9 +48,29 @@ immediately. Only the Where (place) filter also moves the map (see "List and map
 
 ### Where — place filters
 
-Everywhere · Near me · Address · Areas, at most one at a time; Near me and Address with a radius
-slider, and the only filter that moves the map. Everything about it is in
-[filter-where.md](filter-where.md).
+What it does and how it looks: [filter-where.md](filter-where.md). How it is built:
+
+- **State** (`filter.ts`): `place` (`me` | `address` | `areas` | null) plus each option's input
+  (`near`, `address`, `areas`) and the shared `radiusKm` (`RADII_KM` = 1, 2, 5, 10). `origin()` picks
+  the point distances are measured from; `filterPharmacies()` applies only the chosen option.
+- **Map moves**: `placeFrame()` gives the box (`circleBounds()` around the origin, or `boundsOf()` the
+  areas' pharmacies); `placeKey()` changes exactly when the place filter does, and `MapView` moves the
+  map then (camera details in [map.md](map.md#camera-rules)).
+- **Near me** (`useLocate()`, `locationAllowed()` in `hooks.ts`): `getCurrentPosition` with high
+  accuracy, 15 s timeout, 1 min maximum age; auto-locate on load only if the Permissions API reports
+  `granted`.
+- **Address** (`geocode.ts`, `components/AddressSearch.tsx`): Photon `/api/` with `limit=6`, `lang`
+  `en` or `default`, `bbox` = all pharmacies plus 5 km, `lat`/`lon` bias on central Athens; 3 characters,
+  300 ms debounce, `AbortController` for stale requests. Labels: name, street + number, then
+  district/locality/city, deduplicated (`parsePhoton()`).
+- **Whole street**: a Photon `type: "street"` result with `osm_type: "W"` keeps `osm_id` as
+  `address.way`. `useStreet()` asks Nominatim `/search` (`q` = the label's first part, `layer=address`,
+  `polygon_geojson=1`, `dedupe=0`, `limit=40`, bounded to 5 km around the point); `connectedStreet()`
+  keeps the picked way, or else the nearest, and the ways sharing points with it.
+- **Areas** (`components/AreaPicker.tsx`): counts from `filterPharmacies()` with `place: null` and
+  `showClosed: false`; matching on `Area.key` (folded Greek + transliteration).
+- **Suggestions** for both fields: `components/Suggestions.tsx` (`mousedown` picks before the field's
+  `blur`).
 
 ### Show closed
 
@@ -106,7 +126,7 @@ looked up by address. iOS always opens Apple Maps, even if another navigation ap
 - **The map keeps its position when the time window, language or "show closed" change.** It is only
   moved
   - on first load (a jump): Athens centre at zoom 12, or the place filter's frame if the URL has one;
-  - when the **place filter changes** (a flight; see [filter-where.md](filter-where.md#map-camera));
+  - when the **place filter changes** (a flight; see [filter-where.md](filter-where.md#map));
   - by **Show all**;
   - by a card's **On map** (zooms to ≥ 15 and opens the popup; on phones it switches to the Map tab).
 - An open popup stays open across refreshes as long as its pharmacy is still in the results.
@@ -128,5 +148,13 @@ looked up by address. iOS always opens Apple Maps, even if another navigation ap
 Shareable: `?lang=en&view=map&when=custom&date=2026-10-18&from=22:00&to=02:00&place=areas&areas=ΚΥΨΕΛΗ,ΠΑΓΚΡΑΤΙ&closed=1`.
 Defaults are omitted. The URL is updated with `history.replaceState` (no history entries per click).
 
-The place filter's parameters (`place`, `areas`, `addr`, `at`, `way`, `radius`) are listed in
-[filter-where.md](filter-where.md#behaviour). Not stored: the user's location, and the map position.
+Place filter (only the chosen option's parameters are written):
+
+| Option | Parameters |
+|---|---|
+| Near me | `place=me&radius=5` |
+| Address | `place=address&addr=Σκουφά 10, Κολωνάκι&at=37.97790,23.74230&radius=1`, plus `way=<OSM way id>` for a whole street |
+| Areas | `place=areas&areas=ΚΥΨΕΛΗ,ΠΑΓΚΡΑΤΙ` |
+
+`radius` is left out at the default 2; values other than 1/2/5/10 read as 2. `areas=` without `place`
+(older links) reads as Areas. Not stored: the user's location, and the map position.
