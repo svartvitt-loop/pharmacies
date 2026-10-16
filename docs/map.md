@@ -24,6 +24,7 @@ Layers, bottom to top:
 | `street-casing` | `transportation` | thin outline `#d3cab8`, 1.5 px wider than the street |
 | `streets` | `transportation` | colour and width by road class; bigger roads drawn on top (`line-sort-key`) |
 | `street-names` | `transportation_name` | from zoom 13; dark `#2b2b2b` text with a white halo |
+| `street` | GeoJSON (added at runtime, below `street-names`) | a whole street chosen as the address: `#be9df6` (the purple at 50 % over white, opaque so the joins between its OSM ways don't show darker), 2/12/36 px at zoom 10/16/19 |
 | `radius-fill`, `radius-line` | GeoJSON (added at runtime) | the place filter's radius: purple `#7c3aed` at 8 % fill, 1.5 px outline |
 | `pharmacies` | GeoJSON (added at runtime) | cross icons, see below |
 | `you` | GeoJSON (added at runtime) | purple dot: the user's position (Near me) or the chosen address |

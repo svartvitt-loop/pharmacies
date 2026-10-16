@@ -9,7 +9,7 @@ import { PharmacyList } from "./components/PharmacyList";
 import { ViewBar } from "./components/ViewBar";
 import { filterPharmacies, onDuty, origin, placeFrame, placeKey, windowCovered } from "./filter";
 import { inBounds, type Bounds } from "./geo";
-import { useDataset, useMediaQuery, useNow } from "./hooks";
+import { useDataset, useMediaQuery, useNow, useStreet } from "./hooks";
 import { I18nContext, applyToDocument, i18nFor } from "./i18n";
 import { readState, writeState, type StateUpdate, type View } from "./state";
 
@@ -21,6 +21,8 @@ export function App() {
   const sideBySide = useMediaQuery("(min-width: 1024px)");
   const [mapBounds, setMapBounds] = useState<Bounds | null>(null);
   const map = useRef<MapHandle>(null);
+  // A whole street chosen as the address is drawn on the map.
+  const street = useStreet(state.place === "address" && state.address?.way ? state.address : null);
   const i18n = i18nFor(state.lang);
   const { t } = i18n;
 
@@ -78,8 +80,7 @@ export function App() {
               ref={map}
               results={results}
               now={now}
-              origin={origin(state)}
-              radiusKm={state.radiusKm}
+              marks={{ origin: origin(state), radiusKm: state.radiusKm, street }}
               frame={data ? placeFrame(state, data.pharmacies) : null}
               frameKey={placeKey(state)}
               view={state.view}

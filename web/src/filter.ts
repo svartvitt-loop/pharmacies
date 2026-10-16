@@ -13,6 +13,7 @@ export const DEFAULT_RADIUS_KM = 2;
 /** A geocoded address the user picked. */
 export interface Address extends LatLng {
   label: string;
+  way?: number; // a whole street (no house number): one of its OpenStreetMap ways, to draw the street
 }
 
 /** Which pharmacies to show: the part of the app state that filtering reads. */

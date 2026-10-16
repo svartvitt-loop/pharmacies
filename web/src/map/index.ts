@@ -2,7 +2,7 @@ import { LngLatBounds, Map as MapLibre, NavigationControl, Popup, setWorkerUrl, 
 import "maplibre-gl/dist/maplibre-gl.css";
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 import { onDuty, status, type Result } from "../filter";
-import { circlePolygon, type Bounds, type LatLng } from "../geo";
+import { circlePolygon, type Bounds, type LatLng, type Line } from "../geo";
 import type { Lang } from "../i18n";
 import { MARKER_COLORS, MARKER_ORDER, crossImage } from "./markers";
 import { minimalStyle, streetName } from "./style";
@@ -14,6 +14,16 @@ const ATHENS: [number, number] = [23.7275, 37.9838];
 const SETTLE_MS = 400; // quiet time after the last map movement before the list follows the map
 const MAX_FLIGHT_MS = 2500; // cap for animated camera moves (On map, Show all, place filters)
 const PLACE_COLOR = "#7c3aed"; // the origin dot and the radius around it
+// PLACE_COLOR at 50 % over white, opaque: a street is drawn as several OSM ways, and translucent
+// strokes would show darker spots where their ends overlap.
+const STREET_COLOR = "#be9df6";
+
+/** What the place filter draws: the origin dot (the user or the address), its radius, a chosen street. */
+export interface PlaceMarks {
+  origin: LatLng | null;
+  radiusKm: number; // 0: no circle
+  street: Line[] | null;
+}
 
 /** A camera move: to a box, to every result, or to central Athens; flying or jumping. */
 export interface Camera {
@@ -75,9 +85,24 @@ export class PharmacyMap {
       this.map.addSource("pharmacies", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       this.map.addSource("you", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       this.map.addSource("radius", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      this.map.addSource("street", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       for (const [s, color] of Object.entries(MARKER_COLORS)) {
         this.map.addImage(`cross-${s}`, crossImage(color), { pixelRatio: 2 });
       }
+      // The chosen street, a little wider than the street itself; under the names, so they stay legible.
+      this.map.addLayer(
+        {
+          id: "street",
+          type: "line",
+          source: "street",
+          layout: { "line-cap": "round", "line-join": "round" },
+          paint: {
+            "line-color": STREET_COLOR,
+            "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], 10, 2, 16, 12, 19, 36],
+          },
+        },
+        "street-names",
+      );
       this.map.addLayer({ id: "radius-fill", type: "fill", source: "radius", paint: { "fill-color": PLACE_COLOR, "fill-opacity": 0.08 } });
       this.map.addLayer({
         id: "radius-line",
@@ -117,17 +142,15 @@ export class PharmacyMap {
     });
   }
 
-  /**
-   * Show the results, and the place filter's origin (the user's position or the address) with the
-   * radius around it (0: none). camera, if given, moves the map afterwards.
-   */
-  update(results: Result[], now: number, origin: LatLng | null, radiusKm: number, lang: Lang, camera: Camera | null): void {
+  /** Show the results and the place filter's marks; camera, if given, moves the map afterwards. */
+  update(results: Result[], now: number, marks: PlaceMarks, lang: Lang, camera: Camera | null): void {
     if (!this.ready) {
       // Only the latest data matters, but don't lose a camera move requested by an earlier call.
       this.pendingCamera = camera ?? this.pendingCamera;
-      this.pending = () => this.update(results, now, origin, radiusKm, lang, this.pendingCamera);
+      this.pending = () => this.update(results, now, marks, lang, this.pendingCamera);
       return;
     }
+    const { origin, radiusKm, street } = marks;
     this.pendingCamera = null;
     this.origin = origin;
     this.results = new Map(results.map((r) => [r.pharmacy.id, r]));
@@ -160,6 +183,10 @@ export class PharmacyMap {
         origin && radiusKm
           ? [{ type: "Feature", geometry: { type: "Polygon", coordinates: [circlePolygon(origin, radiusKm)] }, properties: {} }]
           : [],
+    });
+    (this.map.getSource("street") as GeoJSONSource).setData({
+      type: "FeatureCollection",
+      features: street ? [{ type: "Feature", geometry: { type: "MultiLineString", coordinates: street }, properties: {} }] : [],
     });
 
     if (camera?.fit === "athens") {

@@ -54,7 +54,7 @@ const strings = {
     you: "Η θέση σας",
     updated: "Ενημέρωση",
     source: "Πηγή: Φαρμακευτικός Σύλλογος Αττικής",
-    geocoder: "Αναζήτηση διεύθυνσης: Photon (komoot), © συντελεστές OpenStreetMap",
+    geocoder: "Αναζήτηση διεύθυνσης: Photon (komoot) και Nominatim, © συντελεστές OpenStreetMap",
     disclaimer: "Οι εφημερίες μπορεί να αλλάξουν απρόβλεπτα — καλέστε πριν μεταβείτε.",
     scope:
       "Εμφανίζονται μόνο τα εφημερεύοντα φαρμακεία, όχι όσα λειτουργούν με κανονικό ωράριο. Ο Πειραιάς (Φαρμακευτικός Σύλλογος Πειραιά) δεν περιλαμβάνεται.",
@@ -112,7 +112,7 @@ const strings = {
     you: "You are here",
     updated: "Updated",
     source: "Source: Pharmaceutical Association of Attica",
-    geocoder: "Address search: Photon by komoot, © OpenStreetMap contributors",
+    geocoder: "Address search: Photon by komoot and Nominatim, © OpenStreetMap contributors",
     disclaimer: "Duty schedules can change unexpectedly — call before you go.",
     scope:
       "Only on-duty pharmacies are shown, not those open during regular hours. Piraeus (covered by a separate association) is not included.",

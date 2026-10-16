@@ -1,9 +1,9 @@
 import { useEffect, useEffectEvent, useImperativeHandle, useRef, useState, type Ref } from "react";
 import { createPortal, flushSync } from "react-dom";
 import type { Frame, Result } from "../filter";
-import type { Bounds, LatLng } from "../geo";
+import type { Bounds } from "../geo";
 import { useI18n } from "../i18n";
-import { PharmacyMap, type Camera } from "../map";
+import { PharmacyMap, type Camera, type PlaceMarks } from "../map";
 import type { View } from "../state";
 import { PharmacyPopup } from "./PharmacyPopup";
 
@@ -16,15 +16,14 @@ interface Props {
   ref: Ref<MapHandle>;
   results: Result[] | null; // null until the data has loaded
   now: number;
-  origin: LatLng | null; // the place filter's point, drawn with radiusKm around it
-  radiusKm: number;
+  marks: PlaceMarks; // what the place filter draws
   frame: Frame; // where the place filter wants the map
   frameKey: string; // changes with the place filter; the map moves to frame then
   view: View;
   onBoundsChange: (bounds: Bounds) => void;
 }
 
-export function MapView({ ref, results, now, origin, radiusKm, frame, frameKey, view, onBoundsChange }: Props) {
+export function MapView({ ref, results, now, marks, frame, frameKey, view, onBoundsChange }: Props) {
   const { lang } = useI18n();
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<PharmacyMap>(null);
@@ -65,8 +64,8 @@ export function MapView({ ref, results, now, origin, radiusKm, frame, frameKey, 
       if (fit) camera = { fit, animate: !first };
       placedFor.current = frameKey;
     }
-    map.current.update(results, now, origin, radiusKm, lang, camera);
-  }, [results, now, origin, radiusKm, lang, frame, frameKey, view]);
+    map.current.update(results, now, marks, lang, camera);
+  }, [results, now, marks, lang, frame, frameKey, view]);
 
   useImperativeHandle(
     ref,

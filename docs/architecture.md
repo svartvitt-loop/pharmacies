@@ -22,6 +22,7 @@ Browser
   loads data/duties.json once → filters by time window and place (near me, address, areas) → list + map
   map tiles and fonts: tiles.openfreemap.org (vector)
   address autocomplete: photon.komoot.io (only while typing in the Address box)
+  street shapes: nominatim.openstreetmap.org (once, when a street without a number is chosen)
 ```
 
 Why this shape: the data changes a few times a day at most and is small (~170 KB gzipped), so a static
@@ -53,7 +54,7 @@ web/
   src/data.ts                  loads duties.json into Pharmacy objects with epoch-ms intervals
   src/time.ts                  Athens time-zone helpers (independent of the visitor's zone)
   src/geo.ts                   distances, bounds, radius circles
-  src/geocode.ts               address search (Photon) and parsing its results
+  src/geocode.ts               address search (Photon), street shapes (Nominatim), parsing both
   src/format.ts                status and hours texts, distances, links
   src/map/index.ts             MapLibre map (imperative class): markers, popups, camera
   src/map/style.ts             the custom street-map style (palette, road classes and widths)

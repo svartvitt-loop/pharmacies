@@ -1,6 +1,8 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { loadDataset, type Dataset } from "./data";
-import type { LatLng } from "./geo";
+import type { Address } from "./filter";
+import { fetchStreet } from "./geocode";
+import type { LatLng, Line } from "./geo";
 
 export function useDataset(): { data: Dataset | null; error: boolean } {
   const [data, setData] = useState<Dataset | null>(null);
@@ -71,4 +73,22 @@ export async function locationAllowed(): Promise<boolean> {
   } catch {
     return false; // no Permissions API
   }
+}
+
+/** The lines of a whole street chosen as the address (see fetchStreet); null while loading, or on failure. */
+export function useStreet(address: Address | null): Line[] | null {
+  const [street, setStreet] = useState<{ address: Address; lines: Line[] } | null>(null);
+  useEffect(() => {
+    if (!address) return;
+    const controller = new AbortController();
+    fetchStreet(address, controller.signal).then(
+      (lines) => setStreet({ address, lines }),
+      (e: unknown) => {
+        // Only decoration: the radius and the results don't depend on it.
+        if (!controller.signal.aborted) console.error(e);
+      },
+    );
+    return () => controller.abort();
+  }, [address]);
+  return street && street.address === address ? street.lines : null;
 }

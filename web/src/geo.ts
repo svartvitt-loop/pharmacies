@@ -65,3 +65,6 @@ export function padBounds(b: Bounds, km: number): Bounds {
   const ne = circleBounds({ lat: b.north, lng: b.east }, km);
   return { west: sw.west, south: sw.south, east: ne.east, north: ne.north };
 }
+
+/** A line as GeoJSON [lng, lat] positions. */
+export type Line = [number, number][];

@@ -87,6 +87,13 @@ The radius is drawn on the map as a light purple circle around the location dot.
   slider applies as for Near me. The address (label and coordinates) **is** in the URL, so the link can
   be shared. What the user types is sent to Photon ([decisions.md](decisions.md) D36); the footer
   credits it.
+- **A street without a number** (Photon's `type: "street"`, an OSM way) is also **drawn on the map**:
+  the whole street in pale purple (the circle's colour at 50 %), under the street names, besides the
+  circle around the chosen point. Its shape comes from Nominatim (D37): one search by the street's name
+  in a 5 km box around the point, every way separately (`dedupe=0`, up to 40). Of those,
+  `connectedStreet()` keeps the picked way and the ways joined to it through shared points, so a
+  namesake elsewhere in the box is left out. The URL keeps the way (`way=`), so a shared link draws the
+  street too. If the request fails nothing is drawn; the radius and the results don't depend on it.
 
 #### Areas
 

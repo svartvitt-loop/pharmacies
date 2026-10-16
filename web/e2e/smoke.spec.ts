@@ -143,6 +143,48 @@ test("filters by distance from one address at a time", async ({ page }) => {
   await expect(page).not.toHaveURL(/addr=/);
 });
 
+test("loads the shape of a whole street chosen as the address", async ({ page }) => {
+  await page.route("https://photon.komoot.io/**", (route) =>
+    route.fulfill({
+      json: {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [23.7385, 37.9799] },
+            properties: { name: "Skoufa", district: "Kolonaki", type: "street", osm_type: "W", osm_id: 1053955141 },
+          },
+        ],
+      },
+    }),
+  );
+  const asked: URLSearchParams[] = [];
+  await page.route("https://nominatim.openstreetmap.org/**", (route) => {
+    asked.push(new URL(route.request().url()).searchParams);
+    const coordinates = [
+      [23.7406, 37.9772],
+      [23.7363, 37.9825],
+    ];
+    return route.fulfill({
+      json: [{ osm_type: "way", osm_id: 1053955141, category: "highway", geojson: { type: "LineString", coordinates } }],
+    });
+  });
+  await page.goto("?lang=en");
+  await page.getByRole("button", { name: "Address" }).click();
+  await page.getByPlaceholder(/street/i).fill("skoufa");
+  await page.getByRole("option", { name: "Skoufa, Kolonaki" }).click();
+  await expect(page).toHaveURL(/place=address&addr=Skoufa%2C\+Kolonaki&at=[\d.]+%2C[\d.]+&way=1053955141/);
+  await expect.poll(() => asked.length).toBeGreaterThan(0);
+  expect(asked[0].get("q")).toBe("Skoufa");
+  expect(asked[0].get("polygon_geojson")).toBe("1");
+  expect(asked[0].get("dedupe")).toBe("0");
+  expect(asked[0].get("bounded")).toBe("1");
+  // A link with the street loads it again.
+  const before = asked.length;
+  await page.reload();
+  await expect.poll(() => asked.length).toBeGreaterThan(before);
+});
+
 test("shows pharmacies not on duty on request", async ({ page }) => {
   await page.goto("?lang=en");
   await page.getByRole("button", { name: "Also show closed" }).click();

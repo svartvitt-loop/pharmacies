@@ -25,7 +25,11 @@ export function readState(now: number): State {
   const areas = q.get("areas")?.split(",").filter(Boolean) ?? [];
   const [lat, lng] = (q.get("at") ?? "").split(",").map(Number);
   const label = q.get("addr");
-  const address: Address | null = label && Number.isFinite(lat) && Number.isFinite(lng) ? { label, lat, lng } : null;
+  const way = Number(q.get("way"));
+  let address: Address | null = null;
+  if (label && Number.isFinite(lat) && Number.isFinite(lng)) {
+    address = Number.isSafeInteger(way) && way > 0 ? { label, lat, lng, way } : { label, lat, lng };
+  }
   let place = q.get("place") as Place | null;
   // Links from before the place filters have only areas=.
   if (!PLACES.includes(place!)) place = areas.length ? "areas" : null;
@@ -64,6 +68,7 @@ export function writeState(state: State): void {
   if (state.place === "address" && state.address) {
     q.set("addr", state.address.label);
     q.set("at", `${state.address.lat.toFixed(5)},${state.address.lng.toFixed(5)}`);
+    if (state.address.way) q.set("way", String(state.address.way));
   }
   if ((state.place === "me" || state.place === "address") && state.radiusKm !== DEFAULT_RADIUS_KM) {
     q.set("radius", state.radiusKm ? String(state.radiusKm) : "any");

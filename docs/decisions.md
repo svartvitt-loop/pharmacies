@@ -175,3 +175,14 @@ forbids autocomplete, and keyed services would ship their key in the bundle. Req
 users type in the Address box goes to a third party (only that, never their location); fair-use
 throttling with no service guarantee, so the box says when search is unavailable; the chosen address
 is in the URL, as a shared link needs it.
+
+**D37 — Nominatim for the shape of a chosen street.** User asked for a street picked without a house
+number to be drawn on the map. Photon returns only a point and one way's extent (its geometry output is
+off on the public server). The first choice was the Overpass API, which can follow the connected ways of
+a street server-side, but its public servers failed almost every request when tried (the main one at
+capacity, the mirrors answering 500 without CORS headers). Nominatim answers in well under a second and
+returns every way of a name within a box (`dedupe=0`, `polygon_geojson=1`); the browser keeps the ways
+connected to the picked one, which drops namesakes in neighbouring districts. One request per pick is
+within Nominatim's usage policy (no autocomplete there; Photon still does that). *Cost:* another
+OpenStreetMap service receives the chosen street name and point; a street longer than the 5 km box or
+than 40 ways is drawn only in part; on failure nothing is drawn.
