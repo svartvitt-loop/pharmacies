@@ -4,6 +4,7 @@ import { filterPharmacies } from "../filter";
 import { fold } from "../greek";
 import { useI18n } from "../i18n";
 import type { State } from "../state";
+import { Suggestions } from "./Suggestions";
 
 interface Props {
   state: State;
@@ -12,7 +13,7 @@ interface Props {
   onChange: (areas: string[]) => void;
 }
 
-/** Selected areas as removable chips, and a search box with suggestions. */
+/** Selected areas as removable chips, and a search box suggesting the areas with pharmacies on duty. */
 export function AreaPicker({ state, data, now, onChange }: Props) {
   const { t, display } = useI18n();
   const [query, setQuery] = useState("");
@@ -22,14 +23,15 @@ export function AreaPicker({ state, data, now, onChange }: Props) {
   let matches: Dataset["areas"] = [];
   if (open && data) {
     const q = fold(query.trim());
-    // Count pharmacies per area in the current time window, ignoring the area filter itself.
+    // Count pharmacies per area in the current time window, ignoring the place filter itself.
     counts = new Map();
-    for (const r of filterPharmacies(data.pharmacies, { ...state, areas: [], near: null, showClosed: false }, now)) {
+    for (const r of filterPharmacies(data.pharmacies, { ...state, place: null, showClosed: false }, now)) {
       counts.set(r.pharmacy.area, (counts.get(r.pharmacy.area) ?? 0) + 1);
     }
+    // Only areas with a pharmacy on duty in the window are worth choosing.
     matches = data.areas
-      .filter((a) => !state.areas.includes(a.name) && (!q || a.key.includes(q)))
-      .sort((a, b) => (q ? 0 : (counts.get(b.name) ?? 0) - (counts.get(a.name) ?? 0)))
+      .filter((a) => counts.has(a.name) && !state.areas.includes(a.name) && (!q || a.key.includes(q)))
+      .sort((a, b) => (q ? 0 : counts.get(b.name)! - counts.get(a.name)!))
       .slice(0, 10);
   }
 
@@ -50,14 +52,14 @@ export function AreaPicker({ state, data, now, onChange }: Props) {
   };
 
   return (
-    <div className="area-picker">
+    <div className="search-picker">
       <div className="chips">
         {state.areas.map((area) => (
           <button
             key={area}
             type="button"
             className="chip selected"
-            title={t("removeArea")}
+            title={t("remove")}
             onClick={() => onChange(state.areas.filter((a) => a !== area))}
           >
             {display(area)} ✕
@@ -65,7 +67,7 @@ export function AreaPicker({ state, data, now, onChange }: Props) {
         ))}
       </div>
       <input
-        className="area-search"
+        className="picker-search"
         type="search"
         autoComplete="off"
         placeholder={t("areaPlaceholder")}
@@ -78,23 +80,14 @@ export function AreaPicker({ state, data, now, onChange }: Props) {
         onBlur={() => setOpen(false)}
         onKeyDown={onKeyDown}
       />
-      <ul className="suggestions" role="listbox" hidden={!matches.length}>
-        {matches.map((area) => (
-          <li
-            key={area.name}
-            role="option"
-            aria-selected={false}
-            // mousedown fires before the input's blur hides the list.
-            onMouseDown={(event) => {
-              event.preventDefault();
-              addArea(area.name);
-            }}
-          >
+      <Suggestions items={matches} itemKey={(area) => area.name} onPick={(area) => addArea(area.name)}>
+        {(area) => (
+          <>
             {display(area.name)}
-            <span className="muted">{counts.get(area.name) ?? 0}</span>
-          </li>
-        ))}
-      </ul>
+            <span className="muted">{counts.get(area.name)}</span>
+          </>
+        )}
+      </Suggestions>
     </div>
   );
 }

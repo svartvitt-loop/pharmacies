@@ -7,7 +7,7 @@ import { Header } from "./components/Header";
 import { MapView, type MapHandle } from "./components/MapView";
 import { PharmacyList } from "./components/PharmacyList";
 import { ViewBar } from "./components/ViewBar";
-import { filterPharmacies, onDuty, windowCovered } from "./filter";
+import { filterPharmacies, onDuty, origin, placeFrame, placeKey, windowCovered } from "./filter";
 import { inBounds, type Bounds } from "./geo";
 import { useDataset, useMediaQuery, useNow } from "./hooks";
 import { I18nContext, applyToDocument, i18nFor } from "./i18n";
@@ -24,7 +24,7 @@ export function App() {
   const i18n = i18nFor(state.lang);
   const { t } = i18n;
 
-  /** Apply a state change. The map keeps its current position; only pins and list update. */
+  /** Apply a state change. The map keeps its current position unless the place filter changed. */
   const update = (change: StateUpdate) =>
     setState((s) => ({ ...s, ...(typeof change === "function" ? change(s) : change) }));
   const setView = (view: View) => update({ view });
@@ -78,9 +78,10 @@ export function App() {
               ref={map}
               results={results}
               now={now}
-              near={state.near}
-              // Without an area or location filter, results span all of Attica; zooming to them hides the city.
-              fit={state.areas.length || state.near ? "results" : "athens"}
+              origin={origin(state)}
+              radiusKm={state.radiusKm}
+              frame={data ? placeFrame(state, data.pharmacies) : null}
+              frameKey={placeKey(state)}
               view={state.view}
               onBoundsChange={setMapBounds}
             />

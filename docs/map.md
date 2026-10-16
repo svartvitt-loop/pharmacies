@@ -24,8 +24,9 @@ Layers, bottom to top:
 | `street-casing` | `transportation` | thin outline `#d3cab8`, 1.5 px wider than the street |
 | `streets` | `transportation` | colour and width by road class; bigger roads drawn on top (`line-sort-key`) |
 | `street-names` | `transportation_name` | from zoom 13; dark `#2b2b2b` text with a white halo |
+| `radius-fill`, `radius-line` | GeoJSON (added at runtime) | the place filter's radius: purple `#7c3aed` at 8 % fill, 1.5 px outline |
 | `pharmacies` | GeoJSON (added at runtime) | cross icons, see below |
-| `you` | GeoJSON (added at runtime) | purple dot for "Near me" |
+| `you` | GeoJSON (added at runtime) | purple dot: the user's position (Near me) or the chosen address |
 
 Deliberately **left out**: buildings, land use, parks, POIs/shops, place and neighbourhood labels,
 house numbers, railways, boundaries. Included road classes: motorway, trunk, primary, secondary,
@@ -75,8 +76,11 @@ against the same OpenFreeMap data. OpenFreeMap's own `liberty`, `bright` and `po
 
 ## Camera rules
 
-The camera only moves on first load, **Show all**, and **On map**; filter changes never move it. The
-map reports its bounds on every `moveend`/`resize`, which drives the "list follows map" behaviour
+The camera only moves on first load, when the **place filter** (Near me, Address, Areas) changes,
+on **Show all**, and on **On map**; the other filters never move it. A place filter is shown by fitting
+a box (`fitBounds`, padding 40 px, at most zoom 15): around its radius circle, around the chosen areas'
+pharmacies, or, with an unlimited radius, around the location and every on-duty result. The `radius`
+ring is computed in `geo.ts` (`circlePolygon()`, 64 points). The map reports its bounds on every `moveend`/`resize`, which drives the "list follows map" behaviour
 (details in [frontend.md](frontend.md#list-and-map-together)).
 
 ## Implementation notes

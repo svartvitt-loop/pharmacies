@@ -16,6 +16,11 @@ export function Footer({ generatedAt }: { generatedAt: number | null }) {
           <span>{`${t("updated")}: ${formatDay(generatedAt, locale)} ${formatClock(generatedAt, locale)}`}</span>
         )}
       </p>
+      <p>
+        <a href="https://photon.komoot.io/" target="_blank" rel="noopener">
+          {t("geocoder")}
+        </a>
+      </p>
     </footer>
   );
 }

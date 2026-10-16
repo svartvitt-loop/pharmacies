@@ -1,5 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { loadDataset, type Dataset } from "./data";
+import type { LatLng } from "./geo";
 
 export function useDataset(): { data: Dataset | null; error: boolean } {
   const [data, setData] = useState<Dataset | null>(null);
@@ -42,4 +43,32 @@ export function useMediaQuery(query: string): boolean {
     },
     () => matchMedia(query).matches,
   );
+}
+
+export type LocateStatus = "locating" | "locationError" | null;
+
+/** Asks the browser for the user's position on demand; onLocated receives it. */
+export function useLocate(onLocated: (near: LatLng) => void): { status: LocateStatus; locate: () => void } {
+  const [status, setStatus] = useState<LocateStatus>(null);
+  const locate = () => {
+    setStatus("locating");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setStatus(null);
+        onLocated({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      },
+      () => setStatus("locationError"),
+      { enableHighAccuracy: true, timeout: 15_000, maximumAge: 60_000 },
+    );
+  };
+  return { status, locate };
+}
+
+/** Whether the user already allowed location access, so asking for it shows no prompt. */
+export async function locationAllowed(): Promise<boolean> {
+  try {
+    return (await navigator.permissions.query({ name: "geolocation" })).state === "granted";
+  } catch {
+    return false; // no Permissions API
+  }
 }

@@ -1,3 +1,4 @@
+import { boundsOf, type Bounds } from "./geo";
 import { searchKey } from "./greek";
 
 /** duties.json as the scraper writes it (docs/architecture.md). */
@@ -35,6 +36,7 @@ export interface Dataset {
   dates: string[];
   pharmacies: Pharmacy[];
   areas: Area[];
+  bounds: Bounds | null; // around every pharmacy with coordinates
 }
 
 export async function loadDataset(): Promise<Dataset> {
@@ -61,5 +63,5 @@ export function parseDataset(raw: RawDataset): Dataset {
     .sort((a, b) => a.localeCompare(b, "el"))
     .map((name) => ({ name, key: searchKey(name) }));
 
-  return { generatedAt: Date.parse(raw.generatedAt), dates: raw.dates, pharmacies, areas };
+  return { generatedAt: Date.parse(raw.generatedAt), dates: raw.dates, pharmacies, areas, bounds: boundsOf(pharmacies) };
 }

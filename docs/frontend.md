@@ -25,8 +25,8 @@ the scraped data.
 
 ## Filters
 
-All filters combine (AND). Changing a filter updates the list and the map markers immediately; it does
-**not** move the map (see "List and map together" below).
+When, Where and Show closed combine (AND). Changing a filter updates the list and the map markers
+immediately. Only the Where (place) filter also moves the map (see "List and map together" below).
 
 ### When — time windows
 
@@ -46,21 +46,57 @@ All filters combine (AND). Changing a filter updates the list and the map marker
   published schedule, the empty-state message says so ("not published yet") rather than "no results".
 - All times are computed in **Europe/Athens** (`time.ts`) whatever the visitor's own time zone.
 
-### Areas
+### Where — place filters
+
+A row of chips: **Everywhere** (default) · **📍 Near me** · **Address** · **Areas**. **At most one place
+filter applies at a time**; below the chips only the chosen one's inputs are shown. Each keeps its
+input while another is chosen (switching from Address to Near me and back restores the address), but
+only the chosen one filters, sorts and goes into the URL (`filter.ts`: `origin()`, `filterPharmacies()`).
+
+Choosing or changing a place filter **moves the map** to it (`placeFrame()`):
+
+| Place filter | Map shows |
+|---|---|
+| Near me / Address, radius 1–10 km | the smallest box around the radius circle |
+| Near me / Address, radius ∞ | the location plus every on-duty result (like **Show all**) |
+| Areas | the box around every pharmacy of the chosen areas (on duty or not, so it doesn't change with the time window) |
+| Everywhere | stays where it is |
+
+The radius is drawn on the map as a light purple circle around the location dot.
+
+#### Near me
+
+- Asks for the browser location (needs HTTPS — works on the live site, not on plain-HTTP previews).
+  Results are then sorted by distance and show it on each card.
+- **Radius slider** with the steps 1 · 2 · 5 · 10 km · ∞ (default 2 km), shared with Address.
+- The location is **never written to the URL**, only `place=me`. Opening such a link locates the user
+  automatically only if location access is already allowed (Permissions API), so a shared link never
+  shows a permission prompt unasked; otherwise a **Find my location** button is shown. It also serves
+  as the retry after an error.
+
+#### Address
+
+- A search box with **autocomplete** from [Photon](https://photon.komoot.io/) (komoot's OpenStreetMap
+  geocoder; `geocode.ts`): from 3 characters, 300 ms after the last keystroke, stale requests cancelled,
+  up to 6 suggestions such as "Σκουφά 10, Κολωνάκι". Results are limited to the box around all
+  pharmacies plus 5 km and biased towards central Athens; English UI asks for English names where
+  OSM has them. If Photon fails, the box says address search is unavailable.
+- The chosen address becomes a removable chip; results are sorted by distance from it and the radius
+  slider applies as for Near me. The address (label and coordinates) **is** in the URL, so the link can
+  be shared. What the user types is sent to Photon ([decisions.md](decisions.md) D36); the footer
+  credits it.
+
+#### Areas
 
 - A search box over the ~160+ FSA area names (e.g. ΚΥΨΕΛΗ, ΠΑΓΚΡΑΤΙ, ΚΕΝΤΡΟ ΑΘΗΝΑΣ); selected areas
   become removable chips. Several areas can be selected.
+- **Only areas with a pharmacy on duty in the selected time window are suggested**, each with that count
+  (the count ignores the place filter and "show closed"). Areas already chosen stay as chips even if the
+  window changes and they have nobody on duty.
 - Matching ignores accents and case and accepts **Latin letters**: `kyps` finds ΚΥΨΕΛΗ (each area has
   a search key of its folded Greek plus its transliteration).
-- With an empty query the suggestions show the areas with the most pharmacies in the current window,
-  each with its count. Enter picks the first suggestion, Backspace in the empty box removes the last chip.
-
-### Near me and radius
-
-- "Near me" asks for the browser location (needs HTTPS — works on the live site, not on plain-HTTP
-  previews). Results are then sorted by distance and show it on each card; a radius selector appears
-  (any / 1 / 2 / 5 / 10 km, defaulting to 2 km).
-- The location is **never written to the URL**. It does not move the map (a filter like any other).
+- With an empty query the suggestions are ordered by count. Enter picks the first suggestion,
+  Backspace in the empty box removes the last chip.
 
 ### Show closed
 
@@ -72,8 +108,8 @@ All filters combine (AND). Changing a filter updates the list and the map marker
 
 ## Results: ordering and status
 
-Order: on-duty pharmacies first, then closed ones (if shown). Within each group: by distance when
-"Near me" is on; otherwise currently-open first, then by the earliest relevant start, then by area.
+Order: on-duty pharmacies first, then closed ones (if shown). Within each group: by distance with
+Near me or Address; otherwise currently-open first, then by the earliest relevant start, then by area.
 
 Statuses (cards, map markers and popups use the same rule, `status()` in `filter.ts`):
 
@@ -113,9 +149,12 @@ looked up by address. iOS always opens Apple Maps, even if another navigation ap
   (plus "· N not on duty" when closed ones are shown) with a **Show all** button that zooms the map
   out to fit every on-duty result. On narrow screens the list always shows everything, since list and
   map are never visible together.
-- **The map keeps its position when filters change.** It is only moved
-  - on first load: Athens centre at zoom 12, or fitted to the results if the URL already has an area
-    or location filter;
+- **The map keeps its position when the time window, language or "show closed" change.** It is only
+  moved
+  - on first load (a jump): Athens centre at zoom 12, or the place filter's frame if the URL has one;
+  - when the **place filter changes** (a flight; see "Where" above). `placeKey()` in `filter.ts`
+    changes exactly then. A map hidden behind the List tab on a phone moves once it is shown.
+    Choosing Everywhere leaves the map where it is;
   - by **Show all**;
   - by a card's **On map** (zooms to ≥ 15 and opens the popup; on phones it switches to the Map tab).
 - An open popup stays open across refreshes as long as its pharmacy is still in the results.
@@ -134,6 +173,17 @@ looked up by address. iOS always opens Apple Maps, even if another navigation ap
 
 ## URL state
 
-Shareable: `?lang=en&view=map&when=custom&date=2026-10-18&from=22:00&to=02:00&areas=ΚΥΨΕΛΗ,ΠΑΓΚΡΑΤΙ&radius=2&closed=1`.
+Shareable: `?lang=en&view=map&when=custom&date=2026-10-18&from=22:00&to=02:00&place=areas&areas=ΚΥΨΕΛΗ,ΠΑΓΚΡΑΤΙ&closed=1`.
 Defaults are omitted. The URL is updated with `history.replaceState` (no history entries per click).
-Not stored: the location, and the map position.
+
+Place filters in the URL (only the one in use):
+
+| Filter | Parameters |
+|---|---|
+| Near me | `place=me&radius=5` |
+| Address | `place=address&addr=Σκουφά 10, Κολωνάκι&at=37.97790,23.74230&radius=1` |
+| Areas | `place=areas&areas=ΚΥΨΕΛΗ,ΠΑΓΚΡΑΤΙ` |
+
+`radius` is `1`, `5`, `10` or `any`, and is left out at the default 2 km. Links from before the place
+filters (`areas=` without `place`) still open as Areas. Not stored: the user's location, and the map
+position.

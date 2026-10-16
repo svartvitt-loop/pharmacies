@@ -22,7 +22,18 @@ const pharmacy = (intervals: [string, string][], extra: Partial<Pharmacy> = {}):
 
 /** The result for one pharmacy, as the list shows it (with "show closed" on). */
 function result(intervals: [string, string][], when: When = "now") {
-  const filter = { when, date: "2026-10-16", from: "20:00", to: "23:00", areas: [], radiusKm: 0, showClosed: true, near: null };
+  const filter = {
+    when,
+    date: "2026-10-16",
+    from: "20:00",
+    to: "23:00",
+    place: null,
+    areas: [],
+    address: null,
+    near: null,
+    radiusKm: 0,
+    showClosed: true,
+  };
   return filterPharmacies([pharmacy(intervals)], filter, NOON)[0];
 }
 

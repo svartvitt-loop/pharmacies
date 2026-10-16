@@ -22,7 +22,9 @@ GitHub Actions (every 3h) ──► scraper/ (Python) ──► web/public/data/
 - **Hours** such as `8 ΠΡΩΙ - 2 ΜΕΣΗΜΕΡΙ & 5 ΑΠΟΓΕΥΜΑ - 8 ΠΡΩΙ ΕΠΟΜΕΝΗΣ` are converted to concrete
   Athens-time intervals (`scraper/fsa_scraper/hours.py`), including overnight shifts and DST changes.
 - **Frontend** loads the single JSON file and filters in the browser. Filters live in the URL, so any
-  view can be shared. Map: MapLibre GL with a custom streets-only style on OpenFreeMap vector tiles.
+  view can be shared. One place filter at a time: near me or an address (Photon autocomplete) with a
+  radius slider, or FSA areas; it moves the map to fit. Map: MapLibre GL with a custom streets-only
+  style on OpenFreeMap vector tiles.
 
 ### Limitations
 

@@ -184,11 +184,47 @@ a {
 }
 
 .custom-range label,
-.radius-label {
+.radius {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 0.9rem;
+}
+
+/* The chosen place filter's inputs, under the Where chips. */
+.place-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.radius {
+  gap: 10px;
+}
+
+.radius-slider {
+  display: flex;
+  flex-direction: column;
+  width: 200px;
+}
+
+.radius-slider input {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--brand);
+}
+
+.radius-ticks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.radius-ticks .current {
+  color: var(--text);
+  font-weight: 600;
 }
 
 input[type="date"],
@@ -201,7 +237,7 @@ select {
   background: var(--surface);
 }
 
-.area-picker {
+.search-picker {
   position: relative;
   display: flex;
   flex-wrap: wrap;
@@ -209,7 +245,7 @@ select {
   gap: 6px;
 }
 
-.area-search {
+.picker-search {
   width: 220px;
   max-width: 100%;
 }
@@ -219,8 +255,9 @@ select {
   top: 100%;
   left: 0;
   z-index: 1000;
-  width: 280px;
-  max-width: calc(100vw - 32px);
+  width: max-content;
+  min-width: 280px;
+  max-width: min(440px, calc(100vw - 32px));
   margin: 4px 0 0;
   padding: 4px;
   list-style: none;
@@ -230,9 +267,14 @@ select {
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.15);
 }
 
+p.suggestions {
+  padding: 8px 12px;
+}
+
 .suggestions li {
   display: flex;
   justify-content: space-between;
+  gap: 12px;
   padding: 7px 10px;
   border-radius: 6px;
   cursor: pointer;

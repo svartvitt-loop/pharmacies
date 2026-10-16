@@ -1,4 +1,4 @@
-import { WHEN_OPTIONS, type Filter, type When } from "./filter";
+import { DEFAULT_RADIUS_KM, PLACES, RADII_KM, WHEN_OPTIONS, type Address, type Filter, type Place, type When } from "./filter";
 import type { Lang } from "./i18n";
 import { athensDate } from "./time";
 
@@ -22,6 +22,16 @@ export function readState(now: number): State {
     /* storage unavailable */
   }
   const langParam = q.get("lang") ?? storedLang ?? (navigator.language.startsWith("el") ? "el" : "en");
+  const areas = q.get("areas")?.split(",").filter(Boolean) ?? [];
+  const [lat, lng] = (q.get("at") ?? "").split(",").map(Number);
+  const label = q.get("addr");
+  const address: Address | null = label && Number.isFinite(lat) && Number.isFinite(lng) ? { label, lat, lng } : null;
+  let place = q.get("place") as Place | null;
+  // Links from before the place filters have only areas=.
+  if (!PLACES.includes(place!)) place = areas.length ? "areas" : null;
+  if (place === "address" && !address) place = null;
+  const radiusParam = q.get("radius");
+  const radius = radiusParam === "any" ? 0 : Number(radiusParam ?? DEFAULT_RADIUS_KM);
   return {
     lang: langParam === "en" ? "en" : "el",
     view: q.get("view") === "map" ? "map" : "list",
@@ -29,13 +39,16 @@ export function readState(now: number): State {
     date: q.get("date") ?? athensDate(now),
     from: q.get("from") ?? "20:00",
     to: q.get("to") ?? "23:00",
-    areas: q.get("areas")?.split(",").filter(Boolean) ?? [],
-    radiusKm: Number(q.get("radius")) || 0,
-    showClosed: q.get("closed") === "1",
+    place,
+    areas,
+    address,
     near: null,
+    radiusKm: (RADII_KM as readonly number[]).includes(radius) ? radius : DEFAULT_RADIUS_KM,
+    showClosed: q.get("closed") === "1",
   };
 }
 
+/** Only the place filter in use goes into the URL, not the inputs the others keep. */
 export function writeState(state: State): void {
   const q = new URLSearchParams();
   q.set("lang", state.lang);
@@ -46,8 +59,15 @@ export function writeState(state: State): void {
     q.set("from", state.from);
     q.set("to", state.to);
   }
-  if (state.areas.length) q.set("areas", state.areas.join(","));
-  if (state.radiusKm) q.set("radius", String(state.radiusKm));
+  if (state.place) q.set("place", state.place);
+  if (state.place === "areas" && state.areas.length) q.set("areas", state.areas.join(","));
+  if (state.place === "address" && state.address) {
+    q.set("addr", state.address.label);
+    q.set("at", `${state.address.lat.toFixed(5)},${state.address.lng.toFixed(5)}`);
+  }
+  if ((state.place === "me" || state.place === "address") && state.radiusKm !== DEFAULT_RADIUS_KM) {
+    q.set("radius", state.radiusKm ? String(state.radiusKm) : "any");
+  }
   if (state.showClosed) q.set("closed", "1");
   history.replaceState(null, "", `${location.pathname}?${q}`);
   try {

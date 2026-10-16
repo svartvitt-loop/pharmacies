@@ -1,9 +1,9 @@
 import { useEffect, useEffectEvent, useImperativeHandle, useRef, useState, type Ref } from "react";
 import { createPortal, flushSync } from "react-dom";
-import type { Result } from "../filter";
+import type { Frame, Result } from "../filter";
 import type { Bounds, LatLng } from "../geo";
 import { useI18n } from "../i18n";
-import { PharmacyMap, type Fit } from "../map";
+import { PharmacyMap, type Camera } from "../map";
 import type { View } from "../state";
 import { PharmacyPopup } from "./PharmacyPopup";
 
@@ -16,18 +16,21 @@ interface Props {
   ref: Ref<MapHandle>;
   results: Result[] | null; // null until the data has loaded
   now: number;
-  near: LatLng | null;
-  fit: Exclude<Fit, false>; // how to place the map on first showing the results
+  origin: LatLng | null; // the place filter's point, drawn with radiusKm around it
+  radiusKm: number;
+  frame: Frame; // where the place filter wants the map
+  frameKey: string; // changes with the place filter; the map moves to frame then
   view: View;
   onBoundsChange: (bounds: Bounds) => void;
 }
 
-export function MapView({ ref, results, now, near, fit, view, onBoundsChange }: Props) {
+export function MapView({ ref, results, now, origin, radiusKm, frame, frameKey, view, onBoundsChange }: Props) {
   const { lang } = useI18n();
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<PharmacyMap>(null);
-  // The map is placed once, the first time it shows results; after that it keeps the user's position.
-  const fitPending = useRef(true);
+  // The frameKey the map was last placed for; null until it is first placed. Other changes
+  // (time window, language, show closed) keep the user's position.
+  const placedFor = useRef<string | null>(null);
   const [popupContent] = useState(() => document.createElement("div"));
   const [popupId, setPopupId] = useState<string | null>(null);
   const onMove = useEffectEvent(onBoundsChange);
@@ -38,7 +41,7 @@ export function MapView({ ref, results, now, near, fit, view, onBoundsChange }: 
       else setPopupId(null);
     });
     map.current = instance;
-    fitPending.current = true;
+    placedFor.current = null;
     return () => {
       map.current = null;
       instance.destroy();
@@ -53,9 +56,17 @@ export function MapView({ ref, results, now, near, fit, view, onBoundsChange }: 
     // A hidden map (the List tab on a phone) can't fit anything yet; wait until it is shown.
     // view is a dependency for this reason: switching tabs is what makes it visible.
     const visible = container.current!.offsetWidth > 0;
-    map.current.update(results, now, near, lang, fitPending.current && visible ? fit : false);
-    if (visible) fitPending.current = false;
-  }, [results, now, near, lang, fit, view]);
+    let camera: Camera | null = null;
+    if (visible && placedFor.current !== frameKey) {
+      // First placement jumps (to central Athens without a place filter); later ones fly, and
+      // turning the place filter off leaves the map where it is.
+      const first = placedFor.current === null;
+      const fit = frame ?? (first ? "athens" : null);
+      if (fit) camera = { fit, animate: !first };
+      placedFor.current = frameKey;
+    }
+    map.current.update(results, now, origin, radiusKm, lang, camera);
+  }, [results, now, origin, radiusKm, lang, frame, frameKey, view]);
 
   useImperativeHandle(
     ref,

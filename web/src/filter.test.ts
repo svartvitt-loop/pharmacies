@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Pharmacy } from "./data";
-import { filterPharmacies, onDuty, status, timeWindow, windowCovered, type Filter } from "./filter";
+import { circleBounds } from "./geo";
+import { filterPharmacies, onDuty, origin, placeFrame, placeKey, status, timeWindow, windowCovered, type Filter } from "./filter";
 
 const at = Date.parse;
 const NOON = at("2026-10-16T12:00:00+03:00"); // Friday 16 October, Athens
@@ -10,12 +11,17 @@ const filter = (change: Partial<Filter> = {}): Filter => ({
   date: "2026-10-16",
   from: "20:00",
   to: "23:00",
+  place: null,
   areas: [],
+  address: null,
+  near: null,
   radiusKm: 0,
   showClosed: false,
-  near: null,
   ...change,
 });
+
+const HERE = { lat: 37.98, lng: 23.73 };
+const ADDRESS = { label: "Σκουφά 10, Κολωνάκι", lat: 37.9779, lng: 23.7423 };
 
 function pharmacy(id: string, intervals: [string, string][], extra: Partial<Pharmacy> = {}): Pharmacy {
   return {
@@ -95,9 +101,13 @@ describe("filterPharmacies", () => {
     expect(results[2].next?.start).toBe(at("2026-10-17T08:00:00+03:00"));
   });
 
-  it("keeps only the chosen areas", () => {
+  it("keeps only the chosen areas, while the areas filter is the one in use", () => {
     const kypseli = pharmacy("kypseli", [DAY], { area: "ΚΥΨΕΛΗ" });
-    expect(ids([day, kypseli], filter({ areas: ["ΚΥΨΕΛΗ"] }))).toEqual(["kypseli"]);
+    expect(ids([day, kypseli], filter({ place: "areas", areas: ["ΚΥΨΕΛΗ"] }))).toEqual(["kypseli"]);
+    expect(ids([day, kypseli], filter({ place: "areas", areas: [] }))).toEqual(["day", "kypseli"]);
+    // The chosen areas are kept while another place filter applies, but they don't filter.
+    expect(ids([day, kypseli], filter({ place: null, areas: ["ΚΥΨΕΛΗ"] }))).toEqual(["day", "kypseli"]);
+    expect(ids([day, kypseli], filter({ place: "me", areas: ["ΚΥΨΕΛΗ"] }))).toEqual(["day", "kypseli"]);
   });
 
   it("puts pharmacies open now first, then by start", () => {
@@ -106,21 +116,73 @@ describe("filterPharmacies", () => {
     expect(ids([later, sinceTen, day], filter({ when: "today" }))).toEqual(["day", "sinceTen", "later"]);
   });
 
-  it("near me: sorts by distance and applies the radius", () => {
-    const here = { lat: 37.98, lng: 23.73 };
+  it("near me: sorts by distance and applies the radius; 0 is any distance", () => {
     const near = pharmacy("near", [DAY], { lat: 37.99 }); // about 1.1 km north
     const far = pharmacy("far", [DAY], { lat: 38.03 }); // about 5.6 km north
-    const results = filterPharmacies([far, near, day], filter({ near: here }), NOON);
+    const results = filterPharmacies([far, near, day], filter({ place: "me", near: HERE }), NOON);
     expect(results.map((r) => r.pharmacy.id)).toEqual(["day", "near", "far"]);
     expect(results[1].distanceKm).toBeCloseTo(1.11, 1);
-    expect(ids([far, near, day], filter({ near: here, radiusKm: 2 }))).toEqual(["day", "near"]);
+    expect(ids([far, near, day], filter({ place: "me", near: HERE, radiusKm: 2 }))).toEqual(["day", "near"]);
+  });
+
+  it("address: measures from the address instead of the user's position", () => {
+    const skoufa = pharmacy("skoufa", [DAY], { lat: 37.978, lng: 23.742 });
+    const results = filterPharmacies([day, skoufa], filter({ place: "address", address: ADDRESS, near: HERE, radiusKm: 1 }), NOON);
+    expect(results.map((r) => r.pharmacy.id)).toEqual(["skoufa"]);
+    expect(results[0].distanceKm).toBeLessThan(0.1);
+  });
+
+  it("the radius and distances apply only with near me or an address", () => {
+    const far = pharmacy("far", [DAY], { lat: 38.03 });
+    const results = filterPharmacies([far], filter({ place: "areas", near: HERE, address: ADDRESS, radiusKm: 1 }), NOON);
+    expect(results.map((r) => [r.pharmacy.id, r.distanceKm])).toEqual([["far", null]]);
   });
 
   it("near me keeps pharmacies without coordinates, whatever the radius", () => {
     const unknown = pharmacy("unknown", [DAY], { lat: null, lng: null });
-    const [result] = filterPharmacies([unknown], filter({ near: { lat: 37.98, lng: 23.73 }, radiusKm: 1 }), NOON);
+    const [result] = filterPharmacies([unknown], filter({ place: "me", near: HERE, radiusKm: 1 }), NOON);
     expect(result.pharmacy.id).toBe("unknown");
     expect(result.distanceKm).toBeNull();
+  });
+});
+
+describe("place filters", () => {
+  it("origin is the user's position for near me, the address for an address, otherwise none", () => {
+    const both = { near: HERE, address: ADDRESS };
+    expect(origin(filter({ place: "me", ...both }))).toBe(HERE);
+    expect(origin(filter({ place: "address", ...both }))).toBe(ADDRESS);
+    expect(origin(filter({ place: "areas", ...both }))).toBeNull();
+    expect(origin(filter({ place: null, ...both }))).toBeNull();
+    expect(origin(filter({ place: "me" }))).toBeNull(); // not located yet
+  });
+
+  it("frames the radius, or every result with any distance", () => {
+    expect(placeFrame(filter({ place: "me", near: HERE, radiusKm: 2 }), [])).toEqual(circleBounds(HERE, 2));
+    expect(placeFrame(filter({ place: "address", address: ADDRESS, radiusKm: 0 }), [])).toBe("results");
+    expect(placeFrame(filter({ place: "me", radiusKm: 2 }), [])).toBeNull();
+    expect(placeFrame(filter(), [])).toBeNull();
+  });
+
+  it("frames all the chosen areas' pharmacies, whether on duty or not", () => {
+    const a = pharmacy("a", [], { area: "Α", lat: 38.0, lng: 23.7 });
+    const b = pharmacy("b", [], { area: "Β", lat: 37.9, lng: 23.8 });
+    const c = pharmacy("c", [], { area: "Γ", lat: 37.5, lng: 23.0 });
+    expect(placeFrame(filter({ place: "areas", areas: ["Α", "Β"] }), [a, b, c])).toEqual({
+      west: 23.7,
+      south: 37.9,
+      east: 23.8,
+      north: 38.0,
+    });
+    expect(placeFrame(filter({ place: "areas", areas: [] }), [a, b, c])).toBeNull();
+  });
+
+  it("the key changes with the place filter in use, and only with it", () => {
+    const base = filter({ place: "me", near: HERE, radiusKm: 2, areas: ["Α"] });
+    expect(placeKey({ ...base, when: "tomorrow", showClosed: true, areas: ["Β"] })).toBe(placeKey(base));
+    expect(placeKey({ ...base, radiusKm: 5 })).not.toBe(placeKey(base));
+    expect(placeKey({ ...base, near: { lat: 38, lng: 23.7 } })).not.toBe(placeKey(base));
+    expect(placeKey({ ...base, place: "address", address: ADDRESS })).not.toBe(placeKey(base));
+    expect(placeKey({ ...base, place: "areas" })).not.toBe(placeKey({ ...base, place: "areas", areas: ["Α", "Β"] }));
   });
 });
 

@@ -19,8 +19,9 @@ GitHub Actions (cron every 3h, on push, on demand)
   └─ actions/deploy-pages → https://svartvitt-loop.github.io/pharmacies/
 
 Browser
-  loads data/duties.json once → filters by time window, area, distance → list + map
+  loads data/duties.json once → filters by time window and place (near me, address, areas) → list + map
   map tiles and fonts: tiles.openfreemap.org (vector)
+  address autocomplete: photon.komoot.io (only while typing in the Address box)
 ```
 
 Why this shape: the data changes a few times a day at most and is small (~170 KB gzipped), so a static
@@ -43,13 +44,16 @@ scraper/
 web/
   index.html                   page head and the #root element
   src/main.tsx, App.tsx        React entry; App owns the state and wires filters ↔ list ↔ map
-  src/hooks.ts                 data loading, one-minute clock, media query
-  src/components/              header, filters, area picker, view bar, list, cards, map, popup, footer
+  src/hooks.ts                 data loading, one-minute clock, media query, geolocation
+  src/components/              header, filters (place chips, radius slider, area and address search),
+                               view bar, list, cards, map, popup, footer
   src/state.ts                 UI state (filters, language, view) and its URL/localStorage sync
-  src/filter.ts                time windows, filtering, sorting, statuses (pure, no DOM)
+  src/filter.ts                time windows, place filters, filtering, sorting, statuses, map frames
+                               (pure, no DOM)
   src/data.ts                  loads duties.json into Pharmacy objects with epoch-ms intervals
   src/time.ts                  Athens time-zone helpers (independent of the visitor's zone)
-  src/geo.ts                   distances, map-area bounds
+  src/geo.ts                   distances, bounds, radius circles
+  src/geocode.ts               address search (Photon) and parsing its results
   src/format.ts                status and hours texts, distances, links
   src/map/index.ts             MapLibre map (imperative class): markers, popups, camera
   src/map/style.ts             the custom street-map style (palette, road classes and widths)
@@ -98,9 +102,10 @@ One file, written by the scraper, read once by the browser.
 1. `readState()` restores filters from the URL (language also from `localStorage`/browser language).
 2. `loadDataset()` fetches the JSON and builds `Pharmacy` objects with sorted `{start, end}` intervals.
 3. `filterPharmacies()` computes the time window, keeps pharmacies whose intervals overlap it (or all,
-   with "show closed"), applies area and radius filters, and sorts.
+   with "show closed"), applies the place filter in use (areas, or a radius around the user or an
+   address), and sorts.
 4. The list renders the results (on wide screens only those inside the visible map area); the map
-   updates its GeoJSON source without moving the camera.
+   updates its GeoJSON sources, and moves the camera only when the place filter changed.
 5. A one-minute timer and tab re-focus re-run the filtering so "open now" statuses stay correct.
 
 Details of each step are in [frontend.md](frontend.md) and [map.md](map.md).

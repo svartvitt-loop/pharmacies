@@ -1,10 +1,19 @@
 import type { Interval, Pharmacy } from "./data";
-import { distanceKm, type LatLng } from "./geo";
+import { boundsOf, circleBounds, distanceKm, type Bounds, type LatLng } from "./geo";
 import { HOUR, addDays, athensDate, athensTime, parseClock } from "./time";
 
 export const WHEN_OPTIONS = ["now", "next3h", "tonight", "today", "tomorrow", "custom"] as const;
 export type When = (typeof WHEN_OPTIONS)[number];
-export const RADII_KM = [0, 1, 2, 5, 10] as const; // 0 = any distance
+/** The place filters; at most one applies at a time (none: all of Attica). */
+export const PLACES = ["me", "address", "areas"] as const;
+export type Place = (typeof PLACES)[number];
+export const RADII_KM = [1, 2, 5, 10, 0] as const; // in slider order; 0 = any distance
+export const DEFAULT_RADIUS_KM = 2;
+
+/** A geocoded address the user picked. */
+export interface Address extends LatLng {
+  label: string;
+}
 
 /** Which pharmacies to show: the part of the app state that filtering reads. */
 export interface Filter {
@@ -12,10 +21,44 @@ export interface Filter {
   date: string; // custom window: Athens date + clock times
   from: string;
   to: string;
-  areas: string[];
-  radiusKm: number;
+  place: Place | null;
+  // Each place filter keeps its input while another one is chosen, so switching back restores it.
+  areas: string[]; // place "areas"
+  address: Address | null; // place "address"
+  near: LatLng | null; // place "me": the user's position, once known
+  radiusKm: number; // places "me" and "address"
   showClosed: boolean; // also list pharmacies not on duty in the window
-  near: LatLng | null;
+}
+
+/** The point distances are measured from: the user's position or the chosen address. */
+export function origin(filter: Filter): LatLng | null {
+  if (filter.place === "me") return filter.near;
+  if (filter.place === "address") return filter.address;
+  return null;
+}
+
+/**
+ * Where the map should look after the place filter changes: a box (around the radius, or around
+ * the chosen areas' pharmacies), "results" (every result and the origin), or null to stay put.
+ */
+export type Frame = Bounds | "results" | null;
+
+export function placeFrame(filter: Filter, pharmacies: Pharmacy[]): Frame {
+  if (filter.place === "areas") {
+    // All the areas' pharmacies, not only those on duty: the box doesn't jump with the time window.
+    const areas = new Set(filter.areas);
+    return boundsOf(pharmacies.filter((p) => areas.has(p.area)));
+  }
+  const from = origin(filter);
+  if (!from) return null;
+  return filter.radiusKm ? circleBounds(from, filter.radiusKm) : "results";
+}
+
+/** Changes whenever the place filter does, and only then; the map moves when it changes. */
+export function placeKey(filter: Filter): string {
+  if (filter.place === "areas") return `areas:${filter.areas.join(",")}`;
+  const from = origin(filter);
+  return `${filter.place}:${from ? `${from.lat},${from.lng}` : "-"}:${filter.radiusKm}`;
 }
 
 /** The [from, to] instants the user is asking about. from === to means "at this moment". */
@@ -72,22 +115,24 @@ export function status(result: Result, now: number): Status {
 
 export function filterPharmacies(pharmacies: Pharmacy[], filter: Filter, now: number): Result[] {
   const window = timeWindow(filter, now);
-  const areas = new Set(filter.areas);
+  const areas = new Set(filter.place === "areas" ? filter.areas : []);
+  const from = origin(filter);
   const results: Result[] = [];
   for (const pharmacy of pharmacies) {
     if (areas.size && !areas.has(pharmacy.area)) continue;
     const matched = pharmacy.intervals.filter((i) => overlaps(i, window));
     if (!matched.length && !filter.showClosed) continue;
     let distance: number | null = null;
-    if (filter.near && pharmacy.lat !== null && pharmacy.lng !== null) {
-      distance = distanceKm(filter.near, { lat: pharmacy.lat, lng: pharmacy.lng });
+    if (from && pharmacy.lat !== null && pharmacy.lng !== null) {
+      distance = distanceKm(from, { lat: pharmacy.lat, lng: pharmacy.lng });
       if (filter.radiusKm && distance > filter.radiusKm) continue;
     }
     const current = pharmacy.intervals.find((i) => i.start <= now && now < i.end) ?? null;
     const next = pharmacy.intervals.find((i) => i.end > now) ?? null;
     results.push({ pharmacy, matched, current, next, distanceKm: distance });
   }
-  // Pharmacies on duty first, then the closed ones; within each group nearest or soonest first.
+  // Pharmacies on duty first, then the closed ones; within each group nearest (from the user's position
+  // or the address) or soonest first.
   return results.sort((a, b) => {
     if (onDuty(a) !== onDuty(b)) return onDuty(a) ? -1 : 1;
     if (a.distanceKm !== null && b.distanceKm !== null) return a.distanceKm - b.distanceKm;

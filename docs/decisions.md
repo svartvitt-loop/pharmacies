@@ -155,3 +155,23 @@ workflow to the deploy job, the only one that runs no third-party code, and ever
 requests for GitHub Actions, npm and uv, grouped so there are few of them, and the workflow tests
 them. Left out on purpose: the Docker images (Node and Python majors are chosen, not drifted into)
 and Playwright, whose npm package and container image must move together.
+
+**D35 — One place filter at a time, and it moves the map.** User. Areas and Near me used to combine
+(AND) and no filter moved the map, so choosing an area left the map elsewhere and the list (which
+follows the map on wide screens) could look empty. The Where group now has Everywhere, Near me,
+Address and Areas, with at most one in use; each keeps its input while another is chosen, but only the
+chosen one filters and goes into the URL. Choosing or changing one fits the map to it: the box around
+the radius (a 1/2/5/10 km/∞ slider; ∞ fits the location and every result), or around all pharmacies
+of the chosen areas, on duty or not, so the box doesn't change with the time window. Area suggestions
+only list areas with someone on duty in the window. Time window, language and "show closed" still
+leave the map alone. *Cost:* the earlier rule "filters never move the map" now has an exception, and
+a radius-only fit can hide on-duty results just outside it (that's the point of the radius).
+
+**D36 — Photon for address autocomplete.** User, of the options presented. The site is static, so a
+geocoder must be called from the browser. Photon (photon.komoot.io, OpenStreetMap data) is built for
+search-as-you-type, needs no key or account and allows cross-origin calls; Nominatim's usage policy
+forbids autocomplete, and keyed services would ship their key in the bundle. Requests are debounced
+(300 ms, from 3 characters), limited to the pharmacies' box and credited in the footer. *Cost:* what
+users type in the Address box goes to a third party (only that, never their location); fair-use
+throttling with no service guarantee, so the box says when search is unavailable; the chosen address
+is in the URL, as a shared link needs it.

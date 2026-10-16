@@ -1,10 +1,15 @@
-import { useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import type { Dataset } from "../data";
-import { RADII_KM, WHEN_OPTIONS } from "../filter";
+import { PLACES, WHEN_OPTIONS, type Place } from "../filter";
+import { locationAllowed, useLocate } from "../hooks";
 import { useI18n, type StringKey } from "../i18n";
 import type { State, StateUpdate } from "../state";
 import { athensDate } from "../time";
+import { AddressSearch } from "./AddressSearch";
 import { AreaPicker } from "./AreaPicker";
+import { RadiusSlider } from "./RadiusSlider";
+
+const PLACE_LABELS: Record<Place, StringKey> = { me: "nearMe", address: "address", areas: "areas" };
 
 interface Props {
   state: State;
@@ -17,7 +22,15 @@ export function Filters({ state, data, now, onChange }: Props) {
   const { t } = useI18n();
   // The custom window applies only once all three fields are filled in.
   const [custom, setCustom] = useState({ date: state.date, from: state.from, to: state.to });
-  const [nearStatus, setNearStatus] = useState<StringKey | null>(null);
+  const { status: locateStatus, locate } = useLocate((near) => onChange({ near }));
+
+  // A link with place=me finds the user on load, but only if that shows no permission prompt.
+  const locateOnLoad = useEffectEvent(() => {
+    if (state.place === "me" && !state.near) locationAllowed().then((allowed) => allowed && locate());
+  });
+  useEffect(() => {
+    locateOnLoad();
+  }, []);
 
   const changeCustom = (field: keyof typeof custom, value: string) => {
     const next = { ...custom, [field]: value };
@@ -25,22 +38,12 @@ export function Filters({ state, data, now, onChange }: Props) {
     if (next.date && next.from && next.to) onChange(next);
   };
 
-  const toggleNear = () => {
-    if (state.near) {
-      setNearStatus(null);
-      onChange({ near: null });
-      return;
-    }
-    setNearStatus("locating");
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setNearStatus(null);
-        onChange((s) => ({ near: { lat: pos.coords.latitude, lng: pos.coords.longitude }, radiusKm: s.radiusKm || 2 }));
-      },
-      () => setNearStatus("locationError"),
-      { enableHighAccuracy: true, timeout: 15_000, maximumAge: 60_000 },
-    );
+  const choosePlace = (place: Place | null) => {
+    onChange({ place });
+    if (place === "me" && !state.near) locate();
   };
+
+  const radius = <RadiusSlider radiusKm={state.radiusKm} onChange={(radiusKm) => onChange({ radiusKm })} />;
 
   return (
     <section className="filters" aria-label="Filters">
@@ -75,28 +78,44 @@ export function Filters({ state, data, now, onChange }: Props) {
         </div>
       </div>
 
+      {/* One place filter at a time; each panel keeps its input while another is chosen. */}
       <div className="filter-group">
-        <span className="filter-label">{t("areas")}</span>
-        <AreaPicker state={state} data={data} now={now} onChange={(areas) => onChange({ areas })} />
-      </div>
-
-      <div className="filter-group near">
-        <button className="chip" type="button" aria-pressed={!!state.near} onClick={toggleNear}>
-          {state.near ? t("nearMeOn") : t("nearMe")}
-        </button>
-        <label className="radius-label" hidden={!state.near}>
-          <span>{t("radius")}</span>
-          <select value={state.radiusKm} onChange={(e) => onChange({ radiusKm: Number(e.target.value) })}>
-            {RADII_KM.map((km) => (
-              <option key={km} value={km}>
-                {km ? `${km} km` : t("anyDistance")}
-              </option>
-            ))}
-          </select>
-        </label>
-        <span className="muted" aria-live="polite">
-          {nearStatus && t(nearStatus)}
-        </span>
+        <span className="filter-label">{t("where")}</span>
+        <div className="chips" role="group">
+          {[null, ...PLACES].map((place) => (
+            <button
+              key={place ?? "everywhere"}
+              type="button"
+              className="chip"
+              aria-pressed={state.place === place}
+              onClick={() => choosePlace(place)}
+            >
+              {t(place ? PLACE_LABELS[place] : "everywhere")}
+            </button>
+          ))}
+        </div>
+        {state.place === "me" && (
+          <div className="place-panel">
+            {radius}
+            {!state.near && locateStatus !== "locating" && (
+              <button type="button" className="chip" onClick={locate}>
+                {t("findMe")}
+              </button>
+            )}
+            <span className="muted" aria-live="polite">
+              {locateStatus && t(locateStatus)}
+            </span>
+          </div>
+        )}
+        {state.place === "address" && (
+          <div className="place-panel">
+            <AddressSearch address={state.address} bounds={data?.bounds ?? null} onChange={(address) => onChange({ address })} />
+            {radius}
+          </div>
+        )}
+        {state.place === "areas" && (
+          <AreaPicker state={state} data={data} now={now} onChange={(areas) => onChange({ areas })} />
+        )}
       </div>
 
       <div className="filter-group near">

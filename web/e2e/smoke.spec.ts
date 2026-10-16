@@ -27,10 +27,104 @@ test("switches language", async ({ page }) => {
 
 test("filters by area", async ({ page }) => {
   await page.goto("?lang=en");
+  await page.getByRole("button", { name: "Areas", exact: true }).click();
   await page.getByPlaceholder(/area/i).fill("kolon");
   await page.getByRole("option").first().click();
   await expect(page.locator("#result-count")).toHaveText("1 pharmacy");
-  await expect(page).toHaveURL(/areas=/);
+  await expect(page).toHaveURL(/place=areas&areas=/);
+  // Another place filter replaces the areas.
+  await page.getByRole("button", { name: "Everywhere" }).click();
+  await expect(page.locator("#result-count")).toHaveText("2 pharmacies");
+  await expect(page).not.toHaveURL(/areas=/);
+});
+
+test("suggests only areas with pharmacies on duty in the window", async ({ page }) => {
+  await page.goto("?lang=en&when=tomorrow");
+  await page.getByRole("button", { name: "Areas", exact: true }).click();
+  await page.getByPlaceholder(/area/i).focus();
+  // Tomorrow only Plaka (area Athina) is on duty; Kolonaki has nobody.
+  await expect(page.getByRole("option")).toHaveText(["Athina1"]);
+});
+
+test("reads area links from before the place filters", async ({ page }) => {
+  await page.goto("?lang=en&areas=ΚΟΛΩΝΑΚΙ");
+  await expect(page.locator("#result-count")).toHaveText("1 pharmacy");
+  await expect(page.getByRole("button", { name: "Areas", exact: true })).toHaveAttribute("aria-pressed", "true");
+});
+
+test.describe("near me", () => {
+  // At Kolonaki pharmacy; Omonia is about 1.4 km away.
+  test.use({ permissions: ["geolocation"], geolocation: { latitude: 37.9779, longitude: 23.7423 } });
+
+  test("filters by distance with the radius slider", async ({ page }) => {
+    await page.goto("?lang=en");
+    await page.getByRole("button", { name: "Near me" }).click();
+    await expect(page.locator(".card .distance").first()).toBeVisible();
+    const slider = page.getByRole("slider", { name: "Radius" });
+    await expect(slider).toHaveAttribute("aria-valuetext", "2 km"); // the default, left out of the URL
+    await expect(page.locator("#result-count")).toHaveText("2 pharmacies");
+    await expect(page).toHaveURL(/place=me$/);
+    await slider.fill("0"); // the first step: 1 km
+    await expect(page.locator("#result-count")).toHaveText("1 pharmacy");
+    await expect(page).toHaveURL(/place=me&radius=1/);
+    await slider.fill("4"); // the last step: any distance
+    await expect(slider).toHaveAttribute("aria-valuetext", "Any distance");
+    await expect(page).toHaveURL(/place=me&radius=any/);
+  });
+
+  test("locates on load when the link asks for it and access is already allowed", async ({ page }) => {
+    await page.goto("?lang=en&place=me&radius=1");
+    await expect(page.locator("#result-count")).toHaveText("1 pharmacy");
+  });
+});
+
+test.describe("near me, far from every pharmacy", () => {
+  // Kifisia, about 11 km north of the fixture's pharmacies.
+  test.use({ permissions: ["geolocation"], geolocation: { latitude: 38.0739, longitude: 23.8111 } });
+
+  test("moves the map to the radius, and stays there when the filter is turned off", async ({ page }) => {
+    await page.goto("?lang=en");
+    await expect(page.locator("#result-count")).toHaveText("2 pharmacies");
+    await page.getByRole("button", { name: "Near me" }).click();
+    await page.getByRole("slider", { name: "Radius" }).fill("0");
+    await expect(page.locator("#list .empty")).toContainText("No on-duty pharmacies");
+    await page.getByRole("button", { name: "Everywhere" }).click();
+    // The map is still over Kifisia, so the list (which follows the map) has nobody.
+    await expect(page.locator("#result-count")).toContainText("0 of 2 pharmacies in the map area", { timeout: 10_000 });
+  });
+});
+
+test("filters by distance from an address", async ({ page }) => {
+  let photonQuery: URLSearchParams | null = null;
+  await page.route("https://photon.komoot.io/**", (route) => {
+    photonQuery = new URL(route.request().url()).searchParams;
+    return route.fulfill({
+      json: {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [23.7423, 37.9779] },
+            properties: { street: "Skoufa", housenumber: "10", district: "Kolonaki", city: "Athens" },
+          },
+        ],
+      },
+    });
+  });
+  await page.goto("?lang=en");
+  await page.getByRole("button", { name: "Address" }).click();
+  await page.getByPlaceholder(/street/i).fill("skoufa 10");
+  await page.getByRole("option", { name: "Skoufa 10, Kolonaki" }).click();
+  expect(photonQuery!.get("q")).toBe("skoufa 10");
+  expect(photonQuery!.get("bbox")).toMatch(/^[\d.]+,[\d.]+,[\d.]+,[\d.]+$/);
+  await expect(page.locator("#result-count")).toHaveText("2 pharmacies");
+  await page.getByRole("slider", { name: "Radius" }).fill("0");
+  await expect(page.locator("#result-count")).toHaveText("1 pharmacy");
+  await expect(page).toHaveURL(/place=address&addr=Skoufa\+10%2C\+Kolonaki&at=37\.97790%2C23\.74230&radius=1/);
+  // The address survives a reload.
+  await page.reload();
+  await expect(page.locator("#result-count")).toHaveText("1 pharmacy");
+  await expect(page.getByRole("button", { name: "Skoufa 10, Kolonaki ✕" })).toBeVisible();
 });
 
 test("shows pharmacies not on duty on request", async ({ page }) => {
