@@ -35,11 +35,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
 
       - name: Lint and test the scraper
         working-directory: scraper
@@ -48,7 +48,7 @@ jobs:
           uv run --locked ruff format --check
           uv run --locked pytest -q
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
@@ -86,11 +86,11 @@ jobs:
     env:
       DAYS: 55 # FSA publishes about 8 weeks ahead; unpublished days are skipped
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
 
       # Push builds reuse the data from the latest scheduled scrape, so code changes
       # deploy without hitting the source. Cache keys are immutable, hence one per run;
@@ -119,7 +119,7 @@ jobs:
           path: web/public/data/duties.json
           key: duties-${{ env.DAYS }}d-${{ github.run_id }}
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
@@ -131,7 +131,7 @@ jobs:
           npm ci
           npm run build
 
-      - uses: actions/upload-pages-artifact@v4
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: web/dist
 
@@ -148,4 +148,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
